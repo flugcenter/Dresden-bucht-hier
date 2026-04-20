@@ -59,7 +59,7 @@ def find_row(raw, words):
 
 
 def last_row(raw, col):
-    for i in range(raw.shape[0]-1, -1, -1):
+    for i in range(raw.shape[0] - 1, -1, -1):
         if clean(raw.iat[i, col]):
             return i
     return None
@@ -73,13 +73,11 @@ def main():
     ROW_RESP = 2
     FIRST_COL = 1
 
-    # 🔴 dynamisch suchen
     row_booked = find_row(raw, ["gebuchte teilnehmer", "gebuchte tn", "gebucht"])
     row_max = find_row(raw, ["max-tn", "max tn", "maximalteilnehmer"])
 
-    # 🔴 FALLBACK falls nicht gefunden
     if row_booked is None:
-        row_booked = 32   # entspricht ungefähr deiner bisherigen Zeile 33
+        row_booked = 32
     if row_max is None:
         row_max = 34
 
@@ -104,7 +102,7 @@ def main():
         max_tn = to_int(raw.iat[row_max, col])
 
         last = last_row(raw, col)
-        status = clean(raw.iat[last, col]) if last else ""
+        status = clean(raw.iat[last, col]) if last is not None else ""
 
         if is_blocked(status):
             continue
@@ -118,8 +116,6 @@ def main():
             "ziel": ziel,
             "datum": datum,
             "resp": resp,
-            "booked": "" if booked is None else booked,
-            "max": "" if max_tn is None else max_tn,
             "frei": frei
         })
 
@@ -183,7 +179,7 @@ body {{
 <body>
 
 <div class="header">
-<h2>Aktuelle Reisen - Verein Dresdner Reisebüros</h2>
+<h2>Aktuelle Reisen</h2>
 <div>Stand: {now}</div>
 </div>
 
@@ -207,7 +203,6 @@ body {{
 <div class="card">
 <div class="title">{r['ziel']}</div>
 <div>{r['datum']} | {r['resp']}</div>
-<div>Gebucht: {r['booked']} | Max: {r['max']}</div>
 <div class="{cls}">Freie Plätze: {frei}</div>
 </div>
 """

@@ -183,7 +183,7 @@ body {{
 <body>
 
 <div class="header">
-<h2>Aktuelle Reisen</h2>
+<h2>Aktuelle Reisen - Verein Dresdner Reisebüros</h2>
 <div>Stand: {now}</div>
 </div>
 

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Vorschau Flug ab Dresden</title>
+
+<style>
+body {
+  font-family: Arial;
+  background: #f5f5f5;
+  margin: 0;
+  padding: 30px;
+}
+
+.wrapper {
+  max-width: 900px;
+  margin: 0 auto;
+  background: white;
+  padding: 20px;
+}
+
+.fc-reise {
+  border-bottom: 1px solid #e5e5e5;
+  padding: 16px 0;
+}
+
+.fc-reise:last-child {
+  border-bottom: none;
+}
+
+.fc-titel {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.fc-termin {
+  color: #777;
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.fc-frei {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.fc-ok { color: #1a7f37; }
+.fc-low { color: #b26a00; }
+.fc-full { color: #b00020; }
+</style>
+</head>
+
+<body>
+
+<div class="wrapper">
+<h2>Flug ab Dresden – Vorschau</h2>
+
+<div id="flugcenter-reisen">Lade Daten...</div>
+</div>
+
+<script>
+(async function () {
+  const ziel = document.getElementById("flugcenter-reisen");
+  const url = "https://flugcenter.github.io/Dresden-bucht-hier/reisen.json";
+
+  try {
+    const res = await fetch(url);
+    const daten = await res.json();
+
+    const html = daten.map(item => {
+      let cls = "fc-ok";
+
+      if (typeof item.frei === "number") {
+        if (item.frei <= 0) cls = "fc-full";
+        else if (item.frei <= 3) cls = "fc-low";
+      }
+
+      return `
+        <div class="fc-reise">
+          <div class="fc-titel">${item.titel}</div>
+          <div class="fc-termin">${item.termin}</div>
+          <div class="fc-frei ${cls}">Noch frei: ${item.frei}</div>
+        </div>
+      `;
+    }).join("");
+
+    ziel.innerHTML = html;
+
+  } catch (e) {
+    ziel.innerHTML = "Daten konnten nicht geladen werden";
+  }
+})();
+</script>
+
+</body>
+</html>

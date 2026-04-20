@@ -13,258 +13,223 @@ def clean_text(value):
     return str(value).strip()
 
 
-def normalize_label(text: str) -> str:
+def normalize_label(text):
     text = clean_text(text).lower()
     text = text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-    text = " ".join(text.split())
-    return text
+    return " ".join(text.split())
 
 
 def to_int_or_none(value):
-    if pd.isna(value):
-        return None
-
-    text = str(value).strip()
+    text = clean_text(value)
     if not text:
         return None
 
-    # deutsche/uneinheitliche Schreibweisen abfangen
-    text = text.replace("\xa0", "").replace(" ", "")
     text = text.replace(".", "").replace(",", ".")
-
     try:
         return int(float(text))
-    except Exception:
+    except:
         return None
 
 
-def parse_start_date(date_text: str):
-    """
-    Erwartete Formate z. B.:
-    - 29.04.-06.05.26
-    - 29.04. - 06.05.26
-    - 29.04.–06.05.26
-
-    Es wird nur das Startdatum links verwendet.
-    """
-    text = clean_text(date_text)
+def parse_start_date(text):
+    text = clean_text(text)
     if not text:
         return None
 
-    text = text.replace("–", "-").replace("—", "-")
+    text = text.replace("–", "-")
 
     try:
-        parts = text.split("-")
-        if not parts:
-            return None
-
-        start_part = parts[0].strip().rstrip(".")
-        start_bits = [x for x in start_part.split(".") if x]
-
-        if len(start_bits) < 2:
-            return None
-
-        day = int(start_bits[0])
-        month = int(start_bits[1])
+        start = text.split("-")[0].strip()
+        d, m = start.split(".")[:2]
 
         digits = "".join(ch for ch in text if ch.isdigit())
-        if len(digits) < 2:
-            return None
+        year = 2000 + int(digits[-2:])
 
-        year_suffix = digits[-2:]
-        year = 2000 + int(year_suffix)
-
-        return datetime(year, month, day)
-    except Exception:
+        return datetime(year, int(m), int(d))
+    except:
         return None
 
 
-def is_blocked_status(status_text: str) -> bool:
-    status = clean_text(status_text).lower()
-    if not status:
-        return False
-    return any(word in status for word in BLOCKED_STATUS_WORDS)
+def is_blocked(status):
+    s = clean_text(status).lower()
+    return any(w in s for w in BLOCKED_STATUS_WORDS)
 
 
-def find_row_index_by_label(raw, possible_labels):
-    """
-    Sucht in Spalte A (Spalte 0) nach einer Beschriftung.
-    Gibt den Zeilenindex zurück oder None.
-    """
-    wanted = {normalize_label(label) for label in possible_labels}
-
-    for row in range(raw.shape[0]):
-        label = normalize_label(raw.iat[row, 0])
-        if label in wanted:
-            return row
-
+def find_row(raw, labels):
+    wanted = {normalize_label(x) for x in labels}
+    for i in range(raw.shape[0]):
+        if normalize_label(raw.iat[i, 0]) in wanted:
+            return i
     return None
 
 
-def find_last_nonempty_row_for_column(raw, col):
-    """
-    Letzte inhaltlich gefüllte Zeile einer Reisespalte.
-    Nützlich für Status in der letzten Zeile.
-    """
-    for row in range(raw.shape[0] - 1, -1, -1):
-        if clean_text(raw.iat[row, col]) != "":
-            return row
+def last_filled_row(raw, col):
+    for i in range(raw.shape[0] - 1, -1, -1):
+        if clean_text(raw.iat[i, col]):
+            return i
     return None
 
 
 def main():
     raw = pd.read_csv(SHEET_CSV_URL, header=None)
 
-    # Feste Kopfzeilen laut deiner Struktur
-    ROW_DESTINATION = 0      # 1. Zeile im Sheet
-    ROW_DATE = 1             # 2. Zeile im Sheet
-    ROW_RESPONSIBLE = 2      # 3. Zeile im Sheet
+    ROW_DEST = 0
+    ROW_DATE = 1
+    ROW_RESP = 2
+    FIRST_COL = 1
 
-    FIRST_DATA_COL = 1       # Spalte A = Bezeichnungen, ab Spalte B beginnen die Reisen
+    row_booked = find_row(raw, ["gebuchte teilnehmer", "gebucht", "gebuchte tn"])
+    row_max = find_row(raw, ["max-tn", "max tn", "maximalteilnehmer"])
 
-    # Dynamisch per Beschriftung suchen
-    row_booked = find_row_index_by_label(raw, [
-        "gebuchte teilnehmer",
-        "gebuchte tn",
-        "teilnehmer gebucht",
-        "gebucht"
-    ])
-
-    row_max = find_row_index_by_label(raw, [
-        "max-tn",
-        "max tn",
-        "max. tn",
-        "maximalteilnehmer",
-        "maximal-teilnehmer",
-        "maximale teilnehmerzahl",
-        "teilnehmer max"
-    ])
-
-    if row_booked is None:
-        raise ValueError("Zeile 'Gebuchte Teilnehmer' wurde in Spalte A nicht gefunden.")
-
-    if row_max is None:
-        raise ValueError("Zeile 'Max-TN' / 'Maximalteilnehmer' wurde in Spalte A nicht gefunden.")
+    if row_booked is None or row_max is None:
+        raise ValueError("Zeilen für Teilnehmer nicht gefunden")
 
     today = datetime.today().date()
     cutoff = today + timedelta(days=7)
 
-    rows = []
+    data = []
 
-    for col in range(FIRST_DATA_COL, raw.shape[1]):
-        destination = clean_text(raw.iat[ROW_DESTINATION, col])
-        date_text = clean_text(raw.iat[ROW_DATE, col])
-        responsible = clean_text(raw.iat[ROW_RESPONSIBLE, col])
+    for col in range(FIRST_COL, raw.shape[1]):
+        ziel = clean_text(raw.iat[ROW_DEST, col])
+        datum = clean_text(raw.iat[ROW_DATE, col])
+        resp = clean_text(raw.iat[ROW_RESP, col])
 
-        if not destination:
+        if not ziel:
             continue
 
-        start_date = parse_start_date(date_text)
-        if start_date is None:
-            continue
-
-        # Filter: Startdatum > heute + 7 Tage
-        if start_date.date() <= cutoff:
+        start = parse_start_date(datum)
+        if not start or start.date() <= cutoff:
             continue
 
         booked = to_int_or_none(raw.iat[row_booked, col])
         max_tn = to_int_or_none(raw.iat[row_max, col])
 
-        # Status aus der letzten gefüllten Zeile der jeweiligen Reisespalte
-        last_row = find_last_nonempty_row_for_column(raw, col)
-        status = ""
-        if last_row is not None:
-            status = clean_text(raw.iat[last_row, col])
+        last = last_filled_row(raw, col)
+        status = clean_text(raw.iat[last, col]) if last else ""
 
-        # Falls in der letzten Zeile ein Status steht und geblockt ist -> raus
-        if is_blocked_status(status):
+        if is_blocked(status):
             continue
 
-        # Freie Plätze nur berechnen, wenn Max-TN vorhanden
         if max_tn is None:
-            free_places = "auf Anfrage"
+            frei = "auf Anfrage"
         else:
-            if booked is None:
-                free_places = max_tn
-            else:
-                free_places = max_tn - booked
+            frei = max_tn if booked is None else max_tn - booked
 
-        rows.append({
-            "Reiseziel": destination,
-            "Reisedatum": date_text,
-            "Verantwortlich": responsible,
-            "Gebuchte TN": "" if booked is None else booked,
-            "Max-TN": "" if max_tn is None else max_tn,
-            "Freie Plätze": free_places,
+        data.append({
+            "ziel": ziel,
+            "datum": datum,
+            "resp": resp,
+            "booked": "" if booked is None else booked,
+            "max": "" if max_tn is None else max_tn,
+            "frei": frei
         })
 
-    df = pd.DataFrame(rows)
+    df = pd.DataFrame(data)
 
     if not df.empty:
-        df["_sort_date"] = df["Reisedatum"].apply(parse_start_date)
-        df = df.sort_values("_sort_date", kind="stable").drop(columns=["_sort_date"])
+        df["_d"] = df["datum"].apply(parse_start_date)
+        df = df.sort_values("_d").drop(columns=["_d"])
 
-    generated_at = datetime.now().strftime("%d.%m.%Y %H:%M")
-
-    if df.empty:
-        table_html = "<p>Zurzeit keine passenden Reisen vorhanden.</p>"
-    else:
-        table_html = df.to_html(index=False, border=0, classes="reise-table")
+    now = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     html = f"""<!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dresden bucht hier – Aktuelle Reisen</title>
-  <style>
-    body {{
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 24px;
-      line-height: 1.4;
-      color: #222;
-      background: #fff;
-    }}
-    h1 {{
-      margin-bottom: 8px;
-    }}
-    .meta {{
-      color: #666;
-      margin-bottom: 18px;
-    }}
-    table.reise-table {{
-      border-collapse: collapse;
-      width: 100%;
-      max-width: 1200px;
-    }}
-    .reise-table th, .reise-table td {{
-      border: 1px solid #ccc;
-      padding: 8px 10px;
-      text-align: left;
-      vertical-align: top;
-    }}
-    .reise-table th {{
-      background: #f3f3f3;
-    }}
-    .reise-table tr:nth-child(even) {{
-      background: #fafafa;
-    }}
-    .hint {{
-      margin-top: 18px;
-      color: #666;
-      font-size: 14px;
-    }}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dresden bucht hier – Reisen</title>
+
+<style>
+body {{
+    font-family: Arial, sans-serif;
+    margin: 0;
+    background: #f5f5f5;
+}}
+
+.header {{
+    background: white;
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+}}
+
+.container {{
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 10px;
+}}
+
+.card {{
+    background: white;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}}
+
+.title {{
+    font-weight: bold;
+    margin-bottom: 5px;
+}}
+
+.row {{
+    font-size: 14px;
+    margin-bottom: 3px;
+}}
+
+.free-ok {{ color: green; }}
+.free-low {{ color: orange; }}
+.free-full {{ color: red; }}
+
+.footer {{
+    text-align: center;
+    font-size: 13px;
+    margin: 30px 0;
+    color: #666;
+}}
+</style>
 </head>
+
 <body>
-  <h1>Aktuelle Reisen</h1>
-  <div class="meta">Automatisch aktualisiert: {generated_at}</div>
-  {table_html}
-  <div class="hint">
-    Filter: Startdatum &gt; heute + 7 Tage, Status in der letzten gefüllten Zeile nicht
-    storniert/ausgebucht/abgesagt, freie Plätze nur bei vorhandener Max-TN,
-    Verantwortliche aus Zeile 3.
-  </div>
+
+<div class="header">
+<h2>Aktuelle Reisen</h2>
+<div>Stand: {now}</div>
+</div>
+
+<div class="container">
+"""
+
+    if df.empty:
+        html += "<p>Keine passenden Reisen</p>"
+    else:
+        for _, r in df.iterrows():
+            frei = r["frei"]
+
+            cls = "free-ok"
+            if isinstance(frei, int):
+                if frei <= 3:
+                    cls = "free-low"
+                if frei <= 0:
+                    cls = "free-full"
+
+            html += f"""
+<div class="card">
+<div class="title">{r['ziel']}</div>
+<div class="row">{r['datum']} | {r['resp']}</div>
+<div class="row">Gebucht: {r['booked']} | Max: {r['max']}</div>
+<div class="row {cls}">Freie Plätze: {frei}</div>
+</div>
+"""
+
+    html += """
+</div>
+
+<div class="footer">
+<strong>Dresdner Reisebüros e.V.</strong><br>
+<a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank">
+Impressum
+</a>
+</div>
+
 </body>
 </html>
 """

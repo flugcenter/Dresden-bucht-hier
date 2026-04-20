@@ -1,125 +1,118 @@
 <!doctype html>
 <html lang="de">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dresden bucht hier – Aktuelle Reisen</title>
-  <style>
-    body {
-      font-family: Arial, Helvetica, sans-serif;
-      margin: 24px;
-      line-height: 1.4;
-      color: #222;
-      background: #fff;
-    }
-    h1 {
-      margin-bottom: 8px;
-    }
-    .meta {
-      color: #666;
-      margin-bottom: 18px;
-    }
-    table.reise-table {
-      border-collapse: collapse;
-      width: 100%;
-      max-width: 1200px;
-    }
-    .reise-table th, .reise-table td {
-      border: 1px solid #ccc;
-      padding: 8px 10px;
-      text-align: left;
-      vertical-align: top;
-    }
-    .reise-table th {
-      background: #f3f3f3;
-    }
-    .reise-table tr:nth-child(even) {
-      background: #fafafa;
-    }
-    .hint {
-      margin-top: 18px;
-      color: #666;
-      font-size: 14px;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dresden bucht hier – Reisen</title>
+
+<style>
+body {
+    font-family: Arial;
+    margin: 0;
+    background: #f5f5f5;
+}
+
+.header {
+    background: white;
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 20px auto;
+    padding: 10px;
+}
+
+.card {
+    background: white;
+    padding: 12px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+.title {
+    font-weight: bold;
+}
+
+.free-ok { color: green; }
+.free-low { color: orange; }
+.free-full { color: red; }
+
+.footer {
+    text-align: center;
+    margin: 30px;
+    color: #666;
+}
+</style>
 </head>
+
 <body>
-  <h1>Aktuelle Reisen</h1>
-  <div class="meta">Automatisch aktualisiert: 20.04.2026 16:48</div>
-  <table class="dataframe reise-table">
-  <thead>
-    <tr style="text-align: right;">
-      <th>Reiseziel</th>
-      <th>Reisedatum</th>
-      <th>Verantwortlich</th>
-      <th>Gebuchte TN</th>
-      <th>Max-TN</th>
-      <th>Freie Plätze</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Montenegro &amp; Kroatien</td>
-      <td>29.04.-06.05.26</td>
-      <td>RB Hoffmann</td>
-      <td>26</td>
-      <td></td>
-      <td>auf Anfrage</td>
-    </tr>
-    <tr>
-      <td>Montenegro &amp; Kroatien</td>
-      <td>29.04.-06.05.26</td>
-      <td>RB Specht</td>
-      <td>22</td>
-      <td>24</td>
-      <td>2</td>
-    </tr>
-    <tr>
-      <td>Menorca Standort</td>
-      <td>19.05.-26.05.26</td>
-      <td>RB Landgraf</td>
-      <td>15</td>
-      <td></td>
-      <td>auf Anfrage</td>
-    </tr>
-    <tr>
-      <td>Verona mit La Traviata</td>
-      <td>28.08.-31.08.26</td>
-      <td>RB Specht</td>
-      <td>4</td>
-      <td>45</td>
-      <td>41</td>
-    </tr>
-    <tr>
-      <td>Jersey</td>
-      <td>05.09.-12.09.26</td>
-      <td>RB Schuster</td>
-      <td>45</td>
-      <td>68</td>
-      <td>23</td>
-    </tr>
-    <tr>
-      <td>Apulien</td>
-      <td>29.09.-06.10.26</td>
-      <td>SAREA</td>
-      <td>18</td>
-      <td></td>
-      <td>auf Anfrage</td>
-    </tr>
-    <tr>
-      <td>Indien</td>
-      <td>01.11.-14.11.26</td>
-      <td>RB Hoffmann</td>
-      <td>15</td>
-      <td></td>
-      <td>auf Anfrage</td>
-    </tr>
-  </tbody>
-</table>
-  <div class="hint">
-    Filter: Startdatum &gt; heute + 7 Tage, Status in der letzten gefüllten Zeile nicht
-    storniert/ausgebucht/abgesagt, freie Plätze nur bei vorhandener Max-TN,
-    Verantwortliche aus Zeile 3.
-  </div>
+
+<div class="header">
+<h2>Aktuelle Reisen</h2>
+<div>Stand: 20.04.2026 17:27</div>
+</div>
+
+<div class="container">
+
+<div class="card">
+<div class="title">Montenegro & Kroatien</div>
+<div>29.04.-06.05.26 | RB Hoffmann</div>
+<div>Gebucht: 26 | Max: </div>
+<div class="free-ok">Freie Plätze: auf Anfrage</div>
+</div>
+
+<div class="card">
+<div class="title">Montenegro & Kroatien</div>
+<div>29.04.-06.05.26 | RB Specht</div>
+<div>Gebucht: 22 | Max: 24</div>
+<div class="free-low">Freie Plätze: 2</div>
+</div>
+
+<div class="card">
+<div class="title">Menorca Standort</div>
+<div>19.05.-26.05.26 | RB Landgraf</div>
+<div>Gebucht: 15 | Max: </div>
+<div class="free-ok">Freie Plätze: auf Anfrage</div>
+</div>
+
+<div class="card">
+<div class="title">Verona mit La Traviata</div>
+<div>28.08.-31.08.26 | RB Specht</div>
+<div>Gebucht: 4 | Max: 45</div>
+<div class="free-ok">Freie Plätze: 41</div>
+</div>
+
+<div class="card">
+<div class="title">Jersey</div>
+<div>05.09.-12.09.26 | RB Schuster</div>
+<div>Gebucht: 45 | Max: 68</div>
+<div class="free-ok">Freie Plätze: 23</div>
+</div>
+
+<div class="card">
+<div class="title">Apulien</div>
+<div>29.09.-06.10.26 | SAREA</div>
+<div>Gebucht: 18 | Max: </div>
+<div class="free-ok">Freie Plätze: auf Anfrage</div>
+</div>
+
+<div class="card">
+<div class="title">Indien</div>
+<div>01.11.-14.11.26 | RB Hoffmann</div>
+<div>Gebucht: 15 | Max: </div>
+<div class="free-ok">Freie Plätze: auf Anfrage</div>
+</div>
+
+</div>
+
+<div class="footer">
+<strong>Dresdner Reisebüros e.V.</strong><br>
+<a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank">
+Impressum
+</a>
+</div>
+
 </body>
 </html>

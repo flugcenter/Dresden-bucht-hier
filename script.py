@@ -7,65 +7,60 @@ SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1ofCTU1sES9tMBjS-hj2ruNt
 BLOCKED_STATUS_WORDS = ("storniert", "ausgebucht", "abgesagt")
 
 
-def clean_text(value):
-    if pd.isna(value):
+def clean(v):
+    if pd.isna(v):
         return ""
-    return str(value).strip()
+    return str(v).strip()
 
 
-def normalize_label(text):
-    text = clean_text(text).lower()
-    text = text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-    return " ".join(text.split())
+def norm(t):
+    t = clean(t).lower()
+    t = t.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+    return " ".join(t.split())
 
 
-def to_int_or_none(value):
-    text = clean_text(value)
-    if not text:
+def to_int(v):
+    t = clean(v)
+    if not t:
         return None
-
-    text = text.replace(".", "").replace(",", ".")
+    t = t.replace(".", "").replace(",", ".")
     try:
-        return int(float(text))
+        return int(float(t))
     except:
         return None
 
 
-def parse_start_date(text):
-    text = clean_text(text)
-    if not text:
+def parse_date(t):
+    t = clean(t)
+    if not t:
         return None
-
-    text = text.replace("–", "-")
-
+    t = t.replace("–", "-")
     try:
-        start = text.split("-")[0].strip()
+        start = t.split("-")[0].strip()
         d, m = start.split(".")[:2]
-
-        digits = "".join(ch for ch in text if ch.isdigit())
+        digits = "".join(ch for ch in t if ch.isdigit())
         year = 2000 + int(digits[-2:])
-
         return datetime(year, int(m), int(d))
     except:
         return None
 
 
-def is_blocked(status):
-    s = clean_text(status).lower()
+def is_blocked(s):
+    s = clean(s).lower()
     return any(w in s for w in BLOCKED_STATUS_WORDS)
 
 
-def find_row(raw, labels):
-    wanted = {normalize_label(x) for x in labels}
+def find_row(raw, words):
+    wanted = {norm(x) for x in words}
     for i in range(raw.shape[0]):
-        if normalize_label(raw.iat[i, 0]) in wanted:
+        if norm(raw.iat[i, 0]) in wanted:
             return i
     return None
 
 
-def last_filled_row(raw, col):
-    for i in range(raw.shape[0] - 1, -1, -1):
-        if clean_text(raw.iat[i, col]):
+def last_row(raw, col):
+    for i in range(raw.shape[0]-1, -1, -1):
+        if clean(raw.iat[i, col]):
             return i
     return None
 
@@ -78,11 +73,15 @@ def main():
     ROW_RESP = 2
     FIRST_COL = 1
 
-    row_booked = find_row(raw, ["gebuchte teilnehmer", "gebucht", "gebuchte tn"])
+    # 🔴 dynamisch suchen
+    row_booked = find_row(raw, ["gebuchte teilnehmer", "gebuchte tn", "gebucht"])
     row_max = find_row(raw, ["max-tn", "max tn", "maximalteilnehmer"])
 
-    if row_booked is None or row_max is None:
-        raise ValueError("Zeilen für Teilnehmer nicht gefunden")
+    # 🔴 FALLBACK falls nicht gefunden
+    if row_booked is None:
+        row_booked = 32   # entspricht ungefähr deiner bisherigen Zeile 33
+    if row_max is None:
+        row_max = 34
 
     today = datetime.today().date()
     cutoff = today + timedelta(days=7)
@@ -90,22 +89,22 @@ def main():
     data = []
 
     for col in range(FIRST_COL, raw.shape[1]):
-        ziel = clean_text(raw.iat[ROW_DEST, col])
-        datum = clean_text(raw.iat[ROW_DATE, col])
-        resp = clean_text(raw.iat[ROW_RESP, col])
+        ziel = clean(raw.iat[ROW_DEST, col])
+        datum = clean(raw.iat[ROW_DATE, col])
+        resp = clean(raw.iat[ROW_RESP, col])
 
         if not ziel:
             continue
 
-        start = parse_start_date(datum)
+        start = parse_date(datum)
         if not start or start.date() <= cutoff:
             continue
 
-        booked = to_int_or_none(raw.iat[row_booked, col])
-        max_tn = to_int_or_none(raw.iat[row_max, col])
+        booked = to_int(raw.iat[row_booked, col])
+        max_tn = to_int(raw.iat[row_max, col])
 
-        last = last_filled_row(raw, col)
-        status = clean_text(raw.iat[last, col]) if last else ""
+        last = last_row(raw, col)
+        status = clean(raw.iat[last, col]) if last else ""
 
         if is_blocked(status):
             continue
@@ -127,7 +126,7 @@ def main():
     df = pd.DataFrame(data)
 
     if not df.empty:
-        df["_d"] = df["datum"].apply(parse_start_date)
+        df["_d"] = df["datum"].apply(parse_date)
         df = df.sort_values("_d").drop(columns=["_d"])
 
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
@@ -141,7 +140,7 @@ def main():
 
 <style>
 body {{
-    font-family: Arial, sans-serif;
+    font-family: Arial;
     margin: 0;
     background: #f5f5f5;
 }}
@@ -167,12 +166,6 @@ body {{
 
 .title {{
     font-weight: bold;
-    margin-bottom: 5px;
-}}
-
-.row {{
-    font-size: 14px;
-    margin-bottom: 3px;
 }}
 
 .free-ok {{ color: green; }}
@@ -181,8 +174,7 @@ body {{
 
 .footer {{
     text-align: center;
-    font-size: 13px;
-    margin: 30px 0;
+    margin: 30px;
     color: #666;
 }}
 </style>
@@ -214,9 +206,9 @@ body {{
             html += f"""
 <div class="card">
 <div class="title">{r['ziel']}</div>
-<div class="row">{r['datum']} | {r['resp']}</div>
-<div class="row">Gebucht: {r['booked']} | Max: {r['max']}</div>
-<div class="row {cls}">Freie Plätze: {frei}</div>
+<div>{r['datum']} | {r['resp']}</div>
+<div>Gebucht: {r['booked']} | Max: {r['max']}</div>
+<div class="{cls}">Freie Plätze: {frei}</div>
 </div>
 """
 

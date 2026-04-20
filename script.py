@@ -1,68 +1,94 @@
-import pandas as pd
-from datetime import datetime, timedelta
+import json
 from pathlib import Path
+from datetime import datetime, timedelta
+
+import pandas as pd
 
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1ofCTU1sES9tMBjS-hj2ruNtxeudRHEP1/export?format=csv"
 
 BLOCKED_STATUS_WORDS = ("storniert", "ausgebucht", "abgesagt")
 
 
-def clean(v):
-    if pd.isna(v):
+def clean(value):
+    if pd.isna(value):
         return ""
-    return str(v).strip()
+    return str(value).strip()
 
 
-def norm(t):
-    t = clean(t).lower()
-    t = t.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
-    return " ".join(t.split())
+def normalize_label(text):
+    text = clean(text).lower()
+    text = text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+    return " ".join(text.split())
 
 
-def to_int(v):
-    t = clean(v)
-    if not t:
+def to_int(value):
+    text = clean(value)
+    if not text:
         return None
-    t = t.replace(".", "").replace(",", ".")
+
+    text = text.replace("\xa0", "").replace(" ", "")
+    text = text.replace(".", "").replace(",", ".")
     try:
-        return int(float(t))
-    except:
+        return int(float(text))
+    except Exception:
         return None
 
 
-def parse_date(t):
-    t = clean(t)
-    if not t:
+def parse_date(text):
+    text = clean(text)
+    if not text:
         return None
-    t = t.replace("–", "-")
+
+    text = text.replace("–", "-").replace("—", "-")
+
     try:
-        start = t.split("-")[0].strip()
-        d, m = start.split(".")[:2]
-        digits = "".join(ch for ch in t if ch.isdigit())
+        start = text.split("-")[0].strip().rstrip(".")
+        parts = [p for p in start.split(".") if p]
+        if len(parts) < 2:
+            return None
+
+        day = int(parts[0])
+        month = int(parts[1])
+
+        digits = "".join(ch for ch in text if ch.isdigit())
+        if len(digits) < 2:
+            return None
+
         year = 2000 + int(digits[-2:])
-        return datetime(year, int(m), int(d))
-    except:
+        return datetime(year, month, day)
+    except Exception:
         return None
 
 
-def is_blocked(s):
-    s = clean(s).lower()
-    return any(w in s for w in BLOCKED_STATUS_WORDS)
+def is_blocked(status):
+    status = clean(status).lower()
+    if not status:
+        return False
+    return any(word in status for word in BLOCKED_STATUS_WORDS)
 
 
-def find_row(raw, words):
-    wanted = {norm(x) for x in words}
+def find_row(raw, labels):
+    wanted = {normalize_label(x) for x in labels}
     for i in range(raw.shape[0]):
-        if norm(raw.iat[i, 0]) in wanted:
+        if normalize_label(raw.iat[i, 0]) in wanted:
             return i
     return None
 
 
-def last_row(raw, col):
+def last_filled_row(raw, col):
     for i in range(raw.shape[0] - 1, -1, -1):
         if clean(raw.iat[i, col]):
             return i
     return None
+
+
+def free_class(free_value):
+    if isinstance(free_value, int):
+        if free_value <= 0:
+            return "free-full"
+        if free_value <= 3:
+            return "free-low"
+    return "free-ok"
 
 
 def main():
@@ -74,8 +100,9 @@ def main():
     FIRST_COL = 1
 
     row_booked = find_row(raw, ["gebuchte teilnehmer", "gebuchte tn", "gebucht"])
-    row_max = find_row(raw, ["max-tn", "max tn", "maximalteilnehmer"])
+    row_max = find_row(raw, ["max-tn", "max tn", "maximalteilnehmer", "maximal teilnehmer"])
 
+    # Fallbacks
     if row_booked is None:
         row_booked = 32
     if row_max is None:
@@ -87,44 +114,60 @@ def main():
     data = []
 
     for col in range(FIRST_COL, raw.shape[1]):
-        ziel = clean(raw.iat[ROW_DEST, col])
-        datum = clean(raw.iat[ROW_DATE, col])
-        resp = clean(raw.iat[ROW_RESP, col])
+        title = clean(raw.iat[ROW_DEST, col])
+        date_text = clean(raw.iat[ROW_DATE, col])
 
-        if not ziel:
+        if not title:
             continue
 
-        start = parse_date(datum)
-        if not start or start.date() <= cutoff:
+        start = parse_date(date_text)
+        if start is None:
+            continue
+
+        if start.date() <= cutoff:
             continue
 
         booked = to_int(raw.iat[row_booked, col])
         max_tn = to_int(raw.iat[row_max, col])
 
-        last = last_row(raw, col)
+        last = last_filled_row(raw, col)
         status = clean(raw.iat[last, col]) if last is not None else ""
 
         if is_blocked(status):
             continue
 
         if max_tn is None:
-            frei = "auf Anfrage"
+            free_value = "auf Anfrage"
         else:
-            frei = max_tn if booked is None else max_tn - booked
+            free_value = max_tn if booked is None else max_tn - booked
 
         data.append({
-            "ziel": ziel,
-            "datum": datum,
-            "resp": resp,
-            "frei": frei
+            "titel": title,
+            "termin": date_text,
+            "frei": free_value,
+            "sort_date": start.strftime("%Y-%m-%d"),
+            "pdf_url": ""
         })
 
-    df = pd.DataFrame(data)
+    data.sort(key=lambda x: x["sort_date"])
 
-    if not df.empty:
-        df["_d"] = df["datum"].apply(parse_date)
-        df = df.sort_values("_d").drop(columns=["_d"])
+    # JSON für WordPress
+    json_output = [
+        {
+            "titel": item["titel"],
+            "termin": item["termin"],
+            "frei": item["frei"],
+            "pdf_url": item["pdf_url"],
+        }
+        for item in data
+    ]
 
+    Path("reisen.json").write_text(
+        json.dumps(json_output, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+
+    # Einfache HTML-Seite für direkten Test / Backup
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     html = f"""<!doctype html>
@@ -132,91 +175,76 @@ def main():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Dresden bucht hier – Reisen</title>
-
+<title>Dresden bucht hier – Aktuelle Reisen</title>
 <style>
 body {{
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     margin: 0;
     background: #f5f5f5;
+    color: #222;
 }}
-
 .header {{
-    background: white;
-    padding: 15px;
+    background: #fff;
     border-bottom: 1px solid #ddd;
+    padding: 18px;
 }}
-
 .container {{
-    max-width: 1000px;
+    max-width: 980px;
     margin: 20px auto;
-    padding: 10px;
+    padding: 0 12px;
 }}
-
 .card {{
-    background: white;
-    padding: 12px;
-    margin-bottom: 10px;
-    border-radius: 8px;
+    background: #fff;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
 }}
-
 .title {{
-    font-weight: bold;
+    font-weight: 700;
+    margin-bottom: 6px;
 }}
-
-.free-ok {{ color: green; }}
-.free-low {{ color: orange; }}
-.free-full {{ color: red; }}
-
+.meta {{
+    color: #666;
+    font-size: 14px;
+}}
+.free-ok {{ color: #137333; font-weight: 700; }}
+.free-low {{ color: #b26a00; font-weight: 700; }}
+.free-full {{ color: #b00020; font-weight: 700; }}
 .footer {{
     text-align: center;
-    margin: 30px;
+    margin: 30px 0;
     color: #666;
+    font-size: 13px;
 }}
 </style>
 </head>
-
 <body>
-
 <div class="header">
-<h2>Aktuelle Reisen - Verein Dresdner Reisebüros</h2>
-<div>Stand: {now}</div>
+  <h2>Aktuelle Reisen</h2>
+  <div class="meta">Stand: {now}</div>
 </div>
-
 <div class="container">
 """
 
-    if df.empty:
-        html += "<p>Keine passenden Reisen</p>"
+    if not data:
+        html += "<p>Zurzeit keine passenden Reisen vorhanden.</p>"
     else:
-        for _, r in df.iterrows():
-            frei = r["frei"]
-
-            cls = "free-ok"
-            if isinstance(frei, int):
-                if frei <= 3:
-                    cls = "free-low"
-                if frei <= 0:
-                    cls = "free-full"
-
+        for item in data:
+            cls = free_class(item["frei"])
             html += f"""
 <div class="card">
-<div class="title">{r['ziel']}</div>
-<div>{r['datum']} | {r['resp']}</div>
-<div class="{cls}">Freie Plätze: {frei}</div>
+  <div class="title">{item['titel']}</div>
+  <div class="meta">{item['termin']}</div>
+  <div class="{cls}">Noch frei: {item['frei']}</div>
 </div>
 """
 
     html += """
 </div>
-
 <div class="footer">
-<strong>Dresdner Reisebüros e.V.</strong><br>
-<a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank">
-Impressum
-</a>
+  <strong>Dresdner Reisebüros e.V.</strong><br>
+  <a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank">Impressum</a>
 </div>
-
 </body>
 </html>
 """

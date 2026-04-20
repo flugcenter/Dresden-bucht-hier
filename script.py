@@ -96,13 +96,12 @@ def main():
 
     ROW_DEST = 0
     ROW_DATE = 1
-    ROW_RESP = 2
+    ROW_RESPONSIBLE = 2
     FIRST_COL = 1
 
     row_booked = find_row(raw, ["gebuchte teilnehmer", "gebuchte tn", "gebucht"])
     row_max = find_row(raw, ["max-tn", "max tn", "maximalteilnehmer", "maximal teilnehmer"])
 
-    # Fallbacks
     if row_booked is None:
         row_booked = 32
     if row_max is None:
@@ -116,6 +115,7 @@ def main():
     for col in range(FIRST_COL, raw.shape[1]):
         title = clean(raw.iat[ROW_DEST, col])
         date_text = clean(raw.iat[ROW_DATE, col])
+        responsible = clean(raw.iat[ROW_RESPONSIBLE, col])
 
         if not title:
             continue
@@ -144,6 +144,7 @@ def main():
         data.append({
             "titel": title,
             "termin": date_text,
+            "reisebuero": responsible,
             "frei": free_value,
             "sort_date": start.strftime("%Y-%m-%d"),
             "pdf_url": ""
@@ -151,7 +152,7 @@ def main():
 
     data.sort(key=lambda x: x["sort_date"])
 
-    # JSON für WordPress
+    # OEFFENTLICHE DATENQUELLE FUER WORDPRESS: OHNE REISEBUERO
     json_output = [
         {
             "titel": item["titel"],
@@ -167,7 +168,7 @@ def main():
         encoding="utf-8"
     )
 
-    # Einfache HTML-Seite für direkten Test / Backup
+    # INTERNE SEITE FUER MITARBEITER: MIT REISEBUERO
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     html = f"""<!doctype html>
@@ -206,6 +207,7 @@ body {{
 .meta {{
     color: #666;
     font-size: 14px;
+    margin-bottom: 4px;
 }}
 .free-ok {{ color: #137333; font-weight: 700; }}
 .free-low {{ color: #b26a00; font-weight: 700; }}
@@ -235,6 +237,7 @@ body {{
 <div class="card">
   <div class="title">{item['titel']}</div>
   <div class="meta">{item['termin']}</div>
+  <div class="meta">Reisebüro: {item['reisebuero']}</div>
   <div class="{cls}">Noch frei: {item['frei']}</div>
 </div>
 """

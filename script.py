@@ -146,19 +146,17 @@ def main():
             "termin": date_text,
             "reisebuero": responsible,
             "frei": free_value,
-            "sort_date": start.strftime("%Y-%m-%d"),
-            "pdf_url": ""
+            "sort_date": start.strftime("%Y-%m-%d")
         })
 
     data.sort(key=lambda x: x["sort_date"])
 
-    # OEFFENTLICHE DATENQUELLE FUER WORDPRESS: OHNE REISEBUERO
+    # reisen.json bleibt schlank für spätere Website-Nutzung
     json_output = [
         {
             "titel": item["titel"],
             "termin": item["termin"],
-            "frei": item["frei"],
-            "pdf_url": item["pdf_url"],
+            "frei": item["frei"]
         }
         for item in data
     ]
@@ -168,7 +166,6 @@ def main():
         encoding="utf-8"
     )
 
-    # INTERNE SEITE FUER MITARBEITER: MIT REISEBUERO
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
 
     html = f"""<!doctype html>

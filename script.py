@@ -219,7 +219,7 @@ body {{
 </head>
 <body>
 <div class="header">
-  <h2>Aktuelle Reisen</h2>
+  <h2>Aktuelle Reisen - Verein Dresdner Reisebüros e.V.</h2>
   <div class="meta">Stand: {now}</div>
 </div>
 <div class="container">

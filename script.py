@@ -362,7 +362,7 @@ body {{
             <h1>Dresden bucht hier</h1>
 
             <div class="subtitle">
-                Interne Mitarbeiterübersicht Studienreisen
+                Interne Mitarbeiterübersicht
             </div>
 
             <div class="status">

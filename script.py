@@ -4,9 +4,7 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-
-SOURCE_FILE = Path("01 Buchungsstand  Reisen 2026 und 2027.xlsx")
-SHEET_NAME = "Tabelle1"
+SHEET_CSV_URL = "@01 Buchungsstand  Reisen 2026 und 2027.xlsx"
 
 BLOCKED_STATUS_WORDS = ("storniert", "ausgebucht", "abgesagt")
 
@@ -19,12 +17,7 @@ def clean(value):
 
 def normalize_label(text):
     text = clean(text).lower()
-    text = (
-        text.replace("ä", "ae")
-        .replace("ö", "oe")
-        .replace("ü", "ue")
-        .replace("ß", "ss")
-    )
+    text = text.replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
     return " ".join(text.split())
 
 
@@ -115,28 +108,19 @@ def free_class(free_value):
 
 def main():
 
-    # Excel-Datei lesen
-    raw = pd.read_excel(
-        SOURCE_FILE,
-        sheet_name=SHEET_NAME,
-        header=None
-    )
+    raw = pd.read_csv(SHEET_CSV_URL, header=None)
 
     ROW_DEST = 0
     ROW_DATE = 1
     ROW_RESPONSIBLE = 2
     FIRST_COL = 1
 
-    # Zeilen dynamisch anhand der linken Beschriftung suchen
     row_booked = find_row(
         raw,
-        [
-            "gebuchte teilnehmer",
-            "gebuchte tn",
-            "gebucht"
-        ]
+        ["gebuchte teilnehmer", "gebuchte tn", "gebucht"]
     )
 
+    # NEU: Mindestteilnehmer anhand der Beschriftung suchen
     row_min = find_row(
         raw,
         [
@@ -149,21 +133,15 @@ def main():
 
     row_max = find_row(
         raw,
-        [
-            "maximalteilnehmer",
-            "maximal teilnehmer",
-            "max-tn",
-            "max tn"
-        ]
+        ["max-tn", "max tn", "maximalteilnehmer", "maximal teilnehmer"]
     )
 
-    # Rückfallpositionen passend zur aktuellen Tabelle:
-    # Excel-Zeile 33 = Python-Index 32
-    # Excel-Zeile 34 = Python-Index 33
-    # Excel-Zeile 35 = Python-Index 34
     if row_booked is None:
         row_booked = 32
 
+    # NEU:
+    # In der bekannten Tabellenstruktur liegt Mindestteilnehmer
+    # direkt zwischen gebuchten und maximalen Teilnehmern.
     if row_min is None:
         row_min = 33
 
@@ -189,31 +167,29 @@ def main():
         if start is None:
             continue
 
-        # Nur Reisen mit Startdatum mehr als 7 Tage in der Zukunft
         if start.date() <= cutoff:
             continue
 
         booked = to_int(raw.iat[row_booked, col])
+
+        # NEU: Mindestteilnehmer auslesen
         min_tn = to_int(raw.iat[row_min, col])
+
         max_tn = to_int(raw.iat[row_max, col])
 
-        # ---------------------------------------------------------
         # NEUE REGEL:
-        # Mindestteilnehmer leer,
-        # aber bereits mindestens 1 Teilnehmer gebucht:
-        # dann Mindestteilnehmer = 1
-        # ---------------------------------------------------------
+        # Wenn Mindestteilnehmer leer ist,
+        # aber bereits Teilnehmer gebucht sind,
+        # wird Mindestteilnehmer = 1 angenommen.
         if min_tn is None and booked is not None and booked > 0:
             min_tn = 1
 
-        # Status aus der letzten gefüllten Zeile der Reisespalte
         last = last_filled_row(raw, col)
         status = clean(raw.iat[last, col]) if last is not None else ""
 
         if is_blocked(status):
             continue
 
-        # Freie Plätze nur berechnen, wenn Maximalteilnehmer vorhanden
         if max_tn is None:
             free_value = "auf Anfrage"
         else:
@@ -223,21 +199,13 @@ def main():
             "titel": title,
             "termin": date_text,
             "reisebuero": responsible,
-            "gebucht": booked,
-            "mindestteilnehmer": min_tn,
-            "maximalteilnehmer": max_tn,
             "frei": free_value,
             "sort_date": start.strftime("%Y-%m-%d")
         })
 
     data.sort(key=lambda x: x["sort_date"])
 
-    # ---------------------------------------------------------
     # Öffentliche JSON-Ausgabe
-    #
-    # WICHTIG:
-    # Kein Reisebüro und keine internen Teilnehmerdaten.
-    # ---------------------------------------------------------
     json_output = [
         {
             "titel": item["titel"],
@@ -248,19 +216,12 @@ def main():
     ]
 
     Path("reisen.json").write_text(
-        json.dumps(
-            json_output,
-            ensure_ascii=False,
-            indent=2
-        ),
+        json.dumps(json_output, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
 
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
 
-    # ---------------------------------------------------------
-    # INTERNE EXPEDIENTENANSICHT
-    # ---------------------------------------------------------
     html = f"""<!doctype html>
 <html lang="de">
 <head>
@@ -426,7 +387,6 @@ body {{
     <div class="header-inner">
 
         <div>
-
             <h1>Dresden bucht hier</h1>
 
             <div class="subtitle">
@@ -436,16 +396,12 @@ body {{
             <div class="status">
                 Stand: {now}
             </div>
-
         </div>
 
-        <a
-            class="info-button"
-            href="https://www.dresden-bucht-hier.de/"
-            target="_blank"
-            rel="noopener noreferrer"
-        >
-            Weitere Informationen
+        <a class="info-button"
+           href="https://www.dresden-bucht-hier.de/"
+           target="_blank">
+           Weitere Informationen
         </a>
 
     </div>
@@ -456,13 +412,10 @@ body {{
 """
 
     if not data:
-
         html += """
 <p>Zurzeit keine passenden Reisen vorhanden.</p>
 """
-
     else:
-
         for item in data:
 
             cls = free_class(item["frei"])
@@ -470,21 +423,21 @@ body {{
             html += f"""
 <div class="card">
 
-    <div class="title">
-        {item['titel']}
-    </div>
+  <div class="title">
+    {item['titel']}
+  </div>
 
-    <div class="meta">
-        {item['termin']}
-    </div>
+  <div class="meta">
+    {item['termin']}
+  </div>
 
-    <div class="meta">
-        Reisebüro: {item['reisebuero']}
-    </div>
+  <div class="meta">
+    Reisebüro: {item['reisebuero']}
+  </div>
 
-    <div class="{cls}">
-        Noch frei: {item['frei']}
-    </div>
+  <div class="{cls}">
+    Noch frei: {item['frei']}
+  </div>
 
 </div>
 """
@@ -494,24 +447,15 @@ body {{
 
 <div class="footer">
 
-    <strong>Dresdner Reisebüros e.V.</strong>
-    <br>
+    <strong>Dresdner Reisebüros e.V.</strong><br>
 
-    <a
-        href="https://www.dresden-bucht-hier.de/"
-        target="_blank"
-        rel="noopener noreferrer"
-    >
+    <a href="https://www.dresden-bucht-hier.de/" target="_blank">
         www.dresden-bucht-hier.de
     </a>
 
     <br><br>
 
-    <a
-        href="https://www.dresden-bucht-hier.de/#impressum"
-        target="_blank"
-        rel="noopener noreferrer"
-    >
+    <a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank">
         Impressum
     </a>
 

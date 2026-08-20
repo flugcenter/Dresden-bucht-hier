@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 
 import pandas as pd
 
-SHEET_CSV_URL = "@01 Buchungsstand  Reisen 2026 und 2027.xlsx"
+
+SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1ofCTU1sES9tMBjS-hj2ruNtxeudRHEP1/export?format=csv"
 
 BLOCKED_STATUS_WORDS = ("storniert", "ausgebucht", "abgesagt")
 
@@ -115,12 +116,17 @@ def main():
     ROW_RESPONSIBLE = 2
     FIRST_COL = 1
 
+    # Gebuchte Teilnehmer dynamisch suchen
     row_booked = find_row(
         raw,
-        ["gebuchte teilnehmer", "gebuchte tn", "gebucht"]
+        [
+            "gebuchte teilnehmer",
+            "gebuchte tn",
+            "gebucht"
+        ]
     )
 
-    # NEU: Mindestteilnehmer anhand der Beschriftung suchen
+    # Mindestteilnehmer dynamisch suchen
     row_min = find_row(
         raw,
         [
@@ -131,17 +137,21 @@ def main():
         ]
     )
 
+    # Maximalteilnehmer dynamisch suchen
     row_max = find_row(
         raw,
-        ["max-tn", "max tn", "maximalteilnehmer", "maximal teilnehmer"]
+        [
+            "max-tn",
+            "max tn",
+            "maximalteilnehmer",
+            "maximal teilnehmer"
+        ]
     )
 
+    # Rückfallwerte für die bekannte Tabellenstruktur
     if row_booked is None:
         row_booked = 32
 
-    # NEU:
-    # In der bekannten Tabellenstruktur liegt Mindestteilnehmer
-    # direkt zwischen gebuchten und maximalen Teilnehmern.
     if row_min is None:
         row_min = 33
 
@@ -167,29 +177,32 @@ def main():
         if start is None:
             continue
 
+        # Nur Reisen, die mehr als 7 Tage in der Zukunft beginnen
         if start.date() <= cutoff:
             continue
 
         booked = to_int(raw.iat[row_booked, col])
-
-        # NEU: Mindestteilnehmer auslesen
         min_tn = to_int(raw.iat[row_min, col])
-
         max_tn = to_int(raw.iat[row_max, col])
 
-        # NEUE REGEL:
+        # -----------------------------------------------------
+        # NEUE REGEL
+        #
         # Wenn Mindestteilnehmer leer ist,
         # aber bereits Teilnehmer gebucht sind,
-        # wird Mindestteilnehmer = 1 angenommen.
+        # wird als Mindestteilnehmer 1 angenommen.
+        # -----------------------------------------------------
         if min_tn is None and booked is not None and booked > 0:
             min_tn = 1
 
+        # Status aus der letzten gefüllten Zeile der Reisespalte
         last = last_filled_row(raw, col)
         status = clean(raw.iat[last, col]) if last is not None else ""
 
         if is_blocked(status):
             continue
 
+        # Freie Plätze
         if max_tn is None:
             free_value = "auf Anfrage"
         else:
@@ -203,9 +216,15 @@ def main():
             "sort_date": start.strftime("%Y-%m-%d")
         })
 
+    # Chronologisch sortieren
     data.sort(key=lambda x: x["sort_date"])
 
-    # Öffentliche JSON-Ausgabe
+    # =========================================================
+    # ÖFFENTLICHE AUSGABE
+    #
+    # reisen.json enthält bewusst KEIN Reisebüro.
+    # =========================================================
+
     json_output = [
         {
             "titel": item["titel"],
@@ -216,11 +235,21 @@ def main():
     ]
 
     Path("reisen.json").write_text(
-        json.dumps(json_output, ensure_ascii=False, indent=2),
+        json.dumps(
+            json_output,
+            ensure_ascii=False,
+            indent=2
+        ),
         encoding="utf-8"
     )
 
     now = datetime.now().strftime("%d.%m.%Y %H:%M")
+
+    # =========================================================
+    # INTERNE MITARBEITERANSICHT
+    #
+    # Reisebüro bleibt hier ausdrücklich sichtbar.
+    # =========================================================
 
     html = f"""<!doctype html>
 <html lang="de">
@@ -387,6 +416,7 @@ body {{
     <div class="header-inner">
 
         <div>
+
             <h1>Dresden bucht hier</h1>
 
             <div class="subtitle">
@@ -396,6 +426,7 @@ body {{
             <div class="status">
                 Stand: {now}
             </div>
+
         </div>
 
         <a class="info-button"
@@ -412,10 +443,13 @@ body {{
 """
 
     if not data:
+
         html += """
 <p>Zurzeit keine passenden Reisen vorhanden.</p>
 """
+
     else:
+
         for item in data:
 
             cls = free_class(item["frei"])

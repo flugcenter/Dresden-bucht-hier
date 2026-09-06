@@ -7,118 +7,172 @@
 <title>Dresden bucht hier – Aktuelle Reisen</title>
 
 <style>
+* { box-sizing: border-box; }
 
 body {
-    font-family: Arial, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     margin: 0;
-    background: #f3f5f7;
-    color: #222;
+    background: #f4f6f8;
+    color: #1f2937;
 }
 
 .header {
-    background: linear-gradient(135deg, #005ea8, #003f70);
+    background: linear-gradient(135deg, #075895, #0a6da9 55%, #0a4879);
     color: white;
-    padding: 28px 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    padding: 18px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
 }
 
 .header-inner {
-    max-width: 1050px;
+    max-width: 1120px;
     margin: auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
+    gap: 16px;
 }
 
 .header h1 {
     margin: 0;
-    font-size: 34px;
+    font-size: 28px;
+    line-height: 1.1;
 }
 
 .subtitle {
-    margin-top: 8px;
-    font-size: 15px;
-    opacity: 0.9;
+    margin-top: 4px;
+    font-size: 14px;
+    opacity: 0.92;
+}
+
+.status {
+    margin-top: 5px;
+    font-size: 12px;
+    opacity: 0.78;
 }
 
 .info-button {
     background: white;
-    color: #005ea8;
+    color: #075895;
     text-decoration: none;
-    padding: 14px 20px;
-    border-radius: 10px;
-    font-weight: bold;
-    transition: 0.2s ease;
+    padding: 10px 15px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
     white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }
 
 .info-button:hover {
-    background: #eef5fb;
+    background: #eef7ff;
 }
 
 .container {
-    max-width: 1050px;
-    margin: 25px auto;
-    padding: 0 14px;
+    max-width: 1120px;
+    margin: 16px auto 0;
+    padding: 0 12px;
 }
 
 .card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
     background: white;
-    border-radius: 14px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-    transition: 0.15s ease;
-    border-left: 5px solid #005ea8;
+    border-radius: 11px;
+    padding: 11px 14px;
+    margin-bottom: 9px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+    border-left: 5px solid var(--accent);
 }
 
-.card:hover {
-    transform: translateY(-2px);
+.card-main {
+    min-width: 0;
+}
+
+.title-row {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}
+
+.flag {
+    font-size: 25px;
+    line-height: 1;
+    flex: 0 0 auto;
 }
 
 .title {
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #003b6f;
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 1.2;
+    font-weight: 800;
 }
 
-.meta {
-    color: #555;
-    font-size: 15px;
-    margin-bottom: 6px;
+.details {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px 14px;
+    margin-top: 6px;
+    color: #5f6874;
+    font-size: 13px;
 }
 
-.free-ok {
-    color: #137333;
-    font-weight: 700;
-    margin-top: 10px;
+.detail strong {
+    color: #303846;
 }
 
-.free-low {
-    color: #b26a00;
-    font-weight: 700;
-    margin-top: 10px;
+.booking-box {
+    display: flex;
+    align-items: stretch;
+    background: var(--tint);
+    border-radius: 9px;
+    overflow: hidden;
+    min-width: 250px;
 }
 
-.free-full {
-    color: #b00020;
-    font-weight: 700;
-    margin-top: 10px;
+.booking-item {
+    min-width: 118px;
+    padding: 8px 12px;
+    text-align: center;
 }
+
+.booking-item + .booking-item {
+    border-left: 1px solid rgba(31,41,55,0.12);
+}
+
+.booking-number {
+    color: var(--accent);
+    font-size: 20px;
+    line-height: 1.1;
+    font-weight: 800;
+}
+
+.booking-label {
+    color: #596273;
+    font-size: 11px;
+    margin-top: 2px;
+}
+
+.free-ok { color: #137333; }
+.free-low { color: #b26a00; }
+.free-full { color: #b00020; }
 
 .footer {
-    text-align: center;
-    margin: 40px 0 25px;
-    color: #666;
-    font-size: 13px;
-    line-height: 1.6;
+    max-width: 1120px;
+    margin: 20px auto 22px;
+    padding: 0 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    color: #6b7280;
+    font-size: 12px;
 }
 
 .footer a {
-    color: #005ea8;
+    color: #075895;
     text-decoration: none;
 }
 
@@ -126,244 +180,242 @@ body {
     text-decoration: underline;
 }
 
-.status {
-    margin-top: 8px;
-    font-size: 13px;
-    opacity: 0.85;
-}
-
-@media (max-width: 700px) {
-
-    .header h1 {
-        font-size: 28px;
+@media (max-width: 760px) {
+    .header-inner {
+        align-items: flex-start;
+        flex-direction: column;
     }
 
-    .header-inner {
-        flex-direction: column;
-        align-items: flex-start;
+    .header h1 {
+        font-size: 24px;
     }
 
     .card {
-        padding: 16px;
+        grid-template-columns: 1fr;
+        gap: 9px;
     }
 
-    .title {
-        font-size: 20px;
+    .booking-box {
+        min-width: 0;
+        width: 100%;
     }
 
+    .booking-item {
+        flex: 1;
+        min-width: 0;
+    }
 }
-
 </style>
 </head>
 
 <body>
 
 <div class="header">
-
     <div class="header-inner">
-
         <div>
-
             <h1>Dresden bucht hier</h1>
-
-            <div class="subtitle">
-                Interne Mitarbeiterübersicht
-            </div>
-
-            <div class="status">
-                Stand: 06.09.2026 08:12
-            </div>
-
+            <div class="subtitle">Interne Mitarbeiterübersicht</div>
+            <div class="status">Stand: 06.09.2026 23:21</div>
         </div>
 
         <a class="info-button"
            href="https://www.dresden-bucht-hier.de/"
-           target="_blank">
-           Weitere Informationen
+           target="_blank"
+           rel="noopener noreferrer">
+            Weitere Informationen
         </a>
-
     </div>
-
 </div>
 
 <div class="container">
 
-<div class="card">
+<div class="card" style="--accent:#0f5fa8; --tint:#edf6ff;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇮🇹</span>
+            <div class="title">Apulien</div>
+        </div>
 
-  <div class="title">
-    Apulien
-  </div>
+        <div class="details">
+            <span class="detail">📅 29.09.-06.10.26</span>
+            <span class="detail"><strong>Reisebüro:</strong> SAREA</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    29.09.-06.10.26
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">38</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: SAREA
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
-<div class="card">
+<div class="card" style="--accent:#0f5fa8; --tint:#edf6ff;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇮🇳</span>
+            <div class="title">Indien</div>
+        </div>
 
-  <div class="title">
-    Indien
-  </div>
+        <div class="details">
+            <span class="detail">📅 01.11.-14.11.26</span>
+            <span class="detail"><strong>Reisebüro:</strong> RB Hoffmann</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    01.11.-14.11.26
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">18</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: RB Hoffmann
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
-<div class="card">
+<div class="card" style="--accent:#8a3d72; --tint:#fff1f8;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇳🇴</span>
+            <div class="title">Südnorwegen Fjorde</div>
+        </div>
 
-  <div class="title">
-    Südnorwegen Fjorde
-  </div>
+        <div class="details">
+            <span class="detail">📅 24.2.-1.3.27</span>
+            <span class="detail"><strong>Reisebüro:</strong> Moch/KM</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    24.2.-1.3.27
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">0</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: Moch/KM
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
-<div class="card">
+<div class="card" style="--accent:#6350a3; --tint:#f5f1ff;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇯🇪</span>
+            <div class="title">Jersey</div>
+        </div>
 
-  <div class="title">
-    Jersey
-  </div>
+        <div class="details">
+            <span class="detail">📅 27.4.-4.5.27</span>
+            <span class="detail"><strong>Reisebüro:</strong> Meiler/Specht/Hoffmann</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    27.4.-4.5.27
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">0</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: Meiler/Specht/Hoffmann
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
-<div class="card">
+<div class="card" style="--accent:#9a3f3f; --tint:#fff1f1;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇪🇸</span>
+            <div class="title">Menorca</div>
+        </div>
 
-  <div class="title">
-    Menorca
-  </div>
+        <div class="details">
+            <span class="detail">📅 4.5.-11.5.27</span>
+            <span class="detail"><strong>Reisebüro:</strong> </span>
+        </div>
+    </div>
 
-  <div class="meta">
-    4.5.-11.5.27
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">0</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: 
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
-<div class="card">
+<div class="card" style="--accent:#6350a3; --tint:#f5f1ff;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇵🇹</span>
+            <div class="title">Azoren</div>
+        </div>
 
-  <div class="title">
-    Azoren
-  </div>
+        <div class="details">
+            <span class="detail">📅 25.8.-1.9.27</span>
+            <span class="detail"><strong>Reisebüro:</strong> Landgraf</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    25.8.-1.9.27
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">0</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: Landgraf
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
-<div class="card">
+<div class="card" style="--accent:#147a82; --tint:#edfbfc;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇨🇦</span>
+            <div class="title">Ostkanada</div>
+        </div>
 
-  <div class="title">
-    Ostkanada
-  </div>
+        <div class="details">
+            <span class="detail">📅 6.9.-19.9.27</span>
+            <span class="detail"><strong>Reisebüro:</strong> SAREA</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    6.9.-19.9.27
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">0</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: SAREA
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
-<div class="card">
+<div class="card" style="--accent:#0f5fa8; --tint:#edf6ff;">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">🇲🇦</span>
+            <div class="title">Marokko</div>
+        </div>
 
-  <div class="title">
-    Marokko
-  </div>
+        <div class="details">
+            <span class="detail">📅 1.11.-8.11.27</span>
+            <span class="detail"><strong>Reisebüro:</strong> Specht/Hoffmann</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    1.11.-8.11.27
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">0</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
 
-  <div class="meta">
-    Reisebüro: Specht/Hoffmann
-  </div>
-
-  <div class="free-ok">
-    Noch frei: auf Anfrage
-  </div>
-
+    </div>
 </div>
 
 </div>
 
 <div class="footer">
-
-    <strong>Dresdner Reisebüros e.V.</strong><br>
-
-    <a href="https://www.dresden-bucht-hier.de/" target="_blank">
-        www.dresden-bucht-hier.de
-    </a>
-
-    <br><br>
-
-    <a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank">
-        Impressum
-    </a>
-
+    <div>
+        <strong>Dresdner Reisebüros e.V.</strong>
+        &nbsp;·&nbsp;
+        <a href="https://www.dresden-bucht-hier.de/" target="_blank" rel="noopener noreferrer">www.dresden-bucht-hier.de</a>
+        &nbsp;·&nbsp;
+        <a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+    </div>
+    <div>Stand: 06.09.2026 23:21</div>
 </div>
 
 </body>

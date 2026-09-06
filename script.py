@@ -12,68 +12,6 @@ SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1ofCTU1sES9tMBjS-hj2ruNt
 
 BLOCKED_STATUS_WORDS = ("storniert", "ausgebucht", "abgesagt")
 
-
-FLAG_RULES = [
-    (("menorca", "mallorca", "spanien", "andalus", "kanaren", "teneriffa", "gran canaria", "ibiza"), "🇪🇸"),
-    (("verona", "apulien", "italien", "sizilien", "sardinien", "toscana", "rom", "venedig", "kalabrien"), "🇮🇹"),
-    (("jersey",), "🇯🇪"),
-    (("indien",), "🇮🇳"),
-    (("island",), "🇮🇸"),
-    (("norwegen",), "🇳🇴"),
-    (("schweden",), "🇸🇪"),
-    (("finnland",), "🇫🇮"),
-    (("daenemark", "dänemark"), "🇩🇰"),
-    (("portugal", "madeira", "azoren"), "🇵🇹"),
-    (("frankreich", "provence", "normandie", "bretagne", "paris", "korsika"), "🇫🇷"),
-    (("griechenland", "kreta", "rhodos", "korfu"), "🇬🇷"),
-    (("tuerkei", "türkei", "kappadokien"), "🇹🇷"),
-    (("kroatien",), "🇭🇷"),
-    (("slowenien",), "🇸🇮"),
-    (("albanien",), "🇦🇱"),
-    (("montenegro",), "🇲🇪"),
-    (("bosnien",), "🇧🇦"),
-    (("serbien",), "🇷🇸"),
-    (("nordmazedonien", "mazedonien"), "🇲🇰"),
-    (("bulgarien",), "🇧🇬"),
-    (("rumaenien", "rumänien"), "🇷🇴"),
-    (("ungarn", "budapest"), "🇭🇺"),
-    (("tschechien", "prag", "boehmen", "böhmen"), "🇨🇿"),
-    (("polen", "breslau", "warschau", "krakau"), "🇵🇱"),
-    (("oesterreich", "österreich", "wien", "tirol"), "🇦🇹"),
-    (("schweiz",), "🇨🇭"),
-    (("niederlande", "holland", "amsterdam"), "🇳🇱"),
-    (("belgien", "bruessel", "brüssel"), "🇧🇪"),
-    (("irland",), "🇮🇪"),
-    (("schottland",), "🏴"),
-    (("england", "grossbritannien", "großbritannien", "london", "wales"), "🇬🇧"),
-    (("marokko",), "🇲🇦"),
-    (("aegypten", "ägypten", "kairo"), "🇪🇬"),
-    (("tunesien",), "🇹🇳"),
-    (("suedafrika", "südafrika"), "🇿🇦"),
-    (("namibia",), "🇳🇦"),
-    (("kenia",), "🇰🇪"),
-    (("tansania", "sansibar"), "🇹🇿"),
-    (("japan",), "🇯🇵"),
-    (("china",), "🇨🇳"),
-    (("vietnam",), "🇻🇳"),
-    (("thailand",), "🇹🇭"),
-    (("sri lanka",), "🇱🇰"),
-    (("nepal",), "🇳🇵"),
-    (("indonesien", "bali"), "🇮🇩"),
-    (("malaysia",), "🇲🇾"),
-    (("singapur",), "🇸🇬"),
-    (("kanada",), "🇨🇦"),
-    (("usa", "vereinigte staaten", "kalifornien", "new york", "florida"), "🇺🇸"),
-    (("mexiko",), "🇲🇽"),
-    (("kuba",), "🇨🇺"),
-    (("brasilien",), "🇧🇷"),
-    (("argentinien",), "🇦🇷"),
-    (("chile",), "🇨🇱"),
-    (("peru",), "🇵🇪"),
-    (("australien",), "🇦🇺"),
-    (("neuseeland",), "🇳🇿"),
-]
-
 CARD_COLORS = [
     ("#0f5fa8", "#edf6ff"),
     ("#8a3d72", "#fff1f8"),
@@ -99,7 +37,6 @@ def normalize_label(text):
 
 def to_int(value):
     text = clean(value)
-
     if not text:
         return None
 
@@ -114,7 +51,6 @@ def to_int(value):
 
 def parse_date(text):
     text = clean(text)
-
     if not text:
         return None
 
@@ -131,12 +67,10 @@ def parse_date(text):
         month = int(parts[1])
 
         digits = "".join(ch for ch in text if ch.isdigit())
-
         if len(digits) < 2:
             return None
 
         year = 2000 + int(digits[-2:])
-
         return datetime(year, month, day)
 
     except Exception:
@@ -145,7 +79,6 @@ def parse_date(text):
 
 def trip_duration_days(text):
     text = clean(text)
-
     if not text:
         return None
 
@@ -159,16 +92,17 @@ def trip_duration_days(text):
         start_numbers = [int(x) for x in re.findall(r"\d+", start_text)]
         end_numbers = [int(x) for x in re.findall(r"\d+", end_text)]
 
-        if len(end_numbers) < 2 or len(start_numbers) < 1:
+        if len(start_numbers) < 1 or len(end_numbers) < 2:
             return None
 
         end_day = end_numbers[0]
         end_month = end_numbers[1]
-        end_year = 2000 + end_numbers[2] if len(end_numbers) >= 3 and end_numbers[2] < 100 else (
-            end_numbers[2] if len(end_numbers) >= 3 else None
-        )
 
-        if end_year is None:
+        if len(end_numbers) >= 3:
+            end_year = end_numbers[2]
+            if end_year < 100:
+                end_year += 2000
+        else:
             digits = "".join(ch for ch in text if ch.isdigit())
             if len(digits) < 2:
                 return None
@@ -178,7 +112,9 @@ def trip_duration_days(text):
         start_month = start_numbers[1] if len(start_numbers) >= 2 else end_month
 
         if len(start_numbers) >= 3:
-            start_year = 2000 + start_numbers[2] if start_numbers[2] < 100 else start_numbers[2]
+            start_year = start_numbers[2]
+            if start_year < 100:
+                start_year += 2000
         else:
             start_year = end_year
 
@@ -197,10 +133,8 @@ def trip_duration_days(text):
 
 def is_blocked(status):
     status = clean(status).lower()
-
     if not status:
         return False
-
     return any(word in status for word in BLOCKED_STATUS_WORDS)
 
 
@@ -218,7 +152,6 @@ def last_filled_row(raw, col):
     for i in range(raw.shape[0] - 1, -1, -1):
         if clean(raw.iat[i, col]):
             return i
-
     return None
 
 
@@ -231,15 +164,6 @@ def free_class(free_value):
     return "free-ok"
 
 
-def flag_for_title(title):
-    normalized = normalize_label(title)
-    for keywords, flag in FLAG_RULES:
-        for keyword in keywords:
-            if normalize_label(keyword) in normalized:
-                return flag
-    return "🌍"
-
-
 def color_for_title(title):
     digest = hashlib.md5(title.encode("utf-8")).hexdigest()
     index = int(digest[:8], 16) % len(CARD_COLORS)
@@ -247,7 +171,6 @@ def color_for_title(title):
 
 
 def main():
-
     raw = pd.read_csv(SHEET_CSV_URL, header=None)
 
     ROW_DEST = 0
@@ -257,39 +180,23 @@ def main():
 
     row_booked = find_row(
         raw,
-        [
-            "gebuchte teilnehmer",
-            "gebuchte tn",
-            "gebucht"
-        ]
+        ["gebuchte teilnehmer", "gebuchte tn", "gebucht"]
     )
 
     row_min = find_row(
         raw,
-        [
-            "mindestteilnehmer",
-            "mindest teilnehmer",
-            "mindest-tn",
-            "mindest tn"
-        ]
+        ["mindestteilnehmer", "mindest teilnehmer", "mindest-tn", "mindest tn"]
     )
 
     row_max = find_row(
         raw,
-        [
-            "max-tn",
-            "max tn",
-            "maximalteilnehmer",
-            "maximal teilnehmer"
-        ]
+        ["max-tn", "max tn", "maximalteilnehmer", "maximal teilnehmer"]
     )
 
     if row_booked is None:
         row_booked = 32
-
     if row_min is None:
         row_min = 33
-
     if row_max is None:
         row_max = 34
 
@@ -299,7 +206,6 @@ def main():
     data = []
 
     for col in range(FIRST_COL, raw.shape[1]):
-
         title = clean(raw.iat[ROW_DEST, col])
         date_text = clean(raw.iat[ROW_DATE, col])
         responsible = clean(raw.iat[ROW_RESPONSIBLE, col])
@@ -308,7 +214,6 @@ def main():
             continue
 
         start = parse_date(date_text)
-
         if start is None:
             continue
 
@@ -343,7 +248,6 @@ def main():
             "gebucht": booked if booked is not None else 0,
             "max_tn": max_tn,
             "frei": free_value,
-            "flagge": flag_for_title(title),
             "accent": accent,
             "tint": tint,
             "sort_date": start.strftime("%Y-%m-%d")
@@ -351,7 +255,6 @@ def main():
 
     data.sort(key=lambda x: x["sort_date"])
 
-    # Öffentliche JSON-Ausgabe bleibt bewusst schlank und ohne Reisebüro.
     json_output = [
         {
             "titel": item["titel"],
@@ -362,11 +265,7 @@ def main():
     ]
 
     Path("reisen.json").write_text(
-        json.dumps(
-            json_output,
-            ensure_ascii=False,
-            indent=2
-        ),
+        json.dumps(json_output, ensure_ascii=False, indent=2),
         encoding="utf-8"
     )
 
@@ -377,26 +276,21 @@ def main():
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <title>Dresden bucht hier – Aktuelle Reisen</title>
-
 <style>
 * {{ box-sizing: border-box; }}
-
 body {{
     font-family: Arial, Helvetica, sans-serif;
     margin: 0;
     background: #f4f6f8;
     color: #1f2937;
 }}
-
 .header {{
     background: linear-gradient(135deg, #075895, #0a6da9 55%, #0a4879);
     color: white;
     padding: 18px 20px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.12);
 }}
-
 .header-inner {{
     max-width: 1120px;
     margin: auto;
@@ -405,25 +299,21 @@ body {{
     align-items: center;
     gap: 16px;
 }}
-
 .header h1 {{
     margin: 0;
     font-size: 28px;
     line-height: 1.1;
 }}
-
 .subtitle {{
     margin-top: 4px;
     font-size: 14px;
     opacity: 0.92;
 }}
-
 .status {{
     margin-top: 5px;
     font-size: 12px;
     opacity: 0.78;
 }}
-
 .info-button {{
     background: white;
     color: #075895;
@@ -435,17 +325,12 @@ body {{
     white-space: nowrap;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }}
-
-.info-button:hover {{
-    background: #eef7ff;
-}}
-
+.info-button:hover {{ background: #eef7ff; }}
 .container {{
     max-width: 1120px;
     margin: 16px auto 0;
     padding: 0 12px;
 }}
-
 .card {{
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
@@ -458,31 +343,13 @@ body {{
     box-shadow: 0 1px 5px rgba(0,0,0,0.07);
     border-left: 5px solid var(--accent);
 }}
-
-.card-main {{
-    min-width: 0;
-}}
-
-.title-row {{
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    min-width: 0;
-}}
-
-.flag {{
-    font-size: 25px;
-    line-height: 1;
-    flex: 0 0 auto;
-}}
-
+.card-main {{ min-width: 0; }}
 .title {{
     color: var(--accent);
     font-size: 18px;
     line-height: 1.2;
     font-weight: 800;
 }}
-
 .details {{
     display: flex;
     flex-wrap: wrap;
@@ -492,11 +359,7 @@ body {{
     color: #5f6874;
     font-size: 13px;
 }}
-
-.detail strong {{
-    color: #303846;
-}}
-
+.detail strong {{ color: #303846; }}
 .booking-box {{
     display: flex;
     align-items: stretch;
@@ -505,34 +368,28 @@ body {{
     overflow: hidden;
     min-width: 250px;
 }}
-
 .booking-item {{
     min-width: 118px;
     padding: 8px 12px;
     text-align: center;
 }}
-
 .booking-item + .booking-item {{
     border-left: 1px solid rgba(31,41,55,0.12);
 }}
-
 .booking-number {{
     color: var(--accent);
     font-size: 20px;
     line-height: 1.1;
     font-weight: 800;
 }}
-
 .booking-label {{
     color: #596273;
     font-size: 11px;
     margin-top: 2px;
 }}
-
 .free-ok {{ color: #137333; }}
 .free-low {{ color: #b26a00; }}
 .free-full {{ color: #b00020; }}
-
 .footer {{
     max-width: 1120px;
     margin: 20px auto 22px;
@@ -544,36 +401,25 @@ body {{
     color: #6b7280;
     font-size: 12px;
 }}
-
 .footer a {{
     color: #075895;
     text-decoration: none;
 }}
-
-.footer a:hover {{
-    text-decoration: underline;
-}}
-
+.footer a:hover {{ text-decoration: underline; }}
 @media (max-width: 760px) {{
     .header-inner {{
         align-items: flex-start;
         flex-direction: column;
     }}
-
-    .header h1 {{
-        font-size: 24px;
-    }}
-
+    .header h1 {{ font-size: 24px; }}
     .card {{
         grid-template-columns: 1fr;
         gap: 9px;
     }}
-
     .booking-box {{
         min-width: 0;
         width: 100%;
     }}
-
     .booking-item {{
         flex: 1;
         min-width: 0;
@@ -581,9 +427,7 @@ body {{
 }}
 </style>
 </head>
-
 <body>
-
 <div class="header">
     <div class="header-inner">
         <div>
@@ -591,7 +435,6 @@ body {{
             <div class="subtitle">Interne Mitarbeiterübersicht</div>
             <div class="status">Stand: {now}</div>
         </div>
-
         <a class="info-button"
            href="https://www.dresden-bucht-hier.de/"
            target="_blank"
@@ -600,7 +443,6 @@ body {{
         </a>
     </div>
 </div>
-
 <div class="container">
 """
 
@@ -609,25 +451,17 @@ body {{
     else:
         for item in data:
             cls = free_class(item["frei"])
-            duration_detail = ""
-            if item["dauer"] is not None:
-                duration_detail = f'<span class="detail">⏱ {item["dauer"]} Tage</span>'
+            duration_text = f" · {item['dauer']} Tage" if item["dauer"] is not None else ""
 
             html += f"""
 <div class="card" style="--accent:{item['accent']}; --tint:{item['tint']};">
     <div class="card-main">
-        <div class="title-row">
-            <span class="flag" aria-hidden="true">{item['flagge']}</span>
-            <div class="title">{item['titel']}</div>
-        </div>
-
+        <div class="title">{item['titel']}</div>
         <div class="details">
-            <span class="detail">📅 {item['termin']}</span>
-            {duration_detail}
+            <span class="detail">📅 {item['termin']}{duration_text}</span>
             <span class="detail"><strong>Reisebüro:</strong> {item['reisebuero']}</span>
         </div>
     </div>
-
     <div class="booking-box">
         <div class="booking-item">
             <div class="booking-number">{item['gebucht']}</div>
@@ -650,7 +484,6 @@ body {{
 
     html += f"""
 </div>
-
 <div class="footer">
     <div>
         <strong>Dresdner Reisebüros e.V.</strong>
@@ -661,15 +494,11 @@ body {{
     </div>
     <div>Stand: {now}</div>
 </div>
-
 </body>
 </html>
 """
 
-    Path("index.html").write_text(
-        html,
-        encoding="utf-8"
-    )
+    Path("index.html").write_text(html, encoding="utf-8")
 
 
 if __name__ == "__main__":

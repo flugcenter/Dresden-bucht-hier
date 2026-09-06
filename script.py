@@ -1,5 +1,6 @@
 import json
 import hashlib
+import re
 from pathlib import Path
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -137,6 +138,58 @@ def parse_date(text):
         year = 2000 + int(digits[-2:])
 
         return datetime(year, month, day)
+
+    except Exception:
+        return None
+
+
+def trip_duration_days(text):
+    text = clean(text)
+
+    if not text:
+        return None
+
+    text = text.replace("–", "-").replace("—", "-")
+
+    try:
+        if "-" not in text:
+            return None
+
+        start_text, end_text = text.split("-", 1)
+        start_numbers = [int(x) for x in re.findall(r"\d+", start_text)]
+        end_numbers = [int(x) for x in re.findall(r"\d+", end_text)]
+
+        if len(end_numbers) < 2 or len(start_numbers) < 1:
+            return None
+
+        end_day = end_numbers[0]
+        end_month = end_numbers[1]
+        end_year = 2000 + end_numbers[2] if len(end_numbers) >= 3 and end_numbers[2] < 100 else (
+            end_numbers[2] if len(end_numbers) >= 3 else None
+        )
+
+        if end_year is None:
+            digits = "".join(ch for ch in text if ch.isdigit())
+            if len(digits) < 2:
+                return None
+            end_year = 2000 + int(digits[-2:])
+
+        start_day = start_numbers[0]
+        start_month = start_numbers[1] if len(start_numbers) >= 2 else end_month
+
+        if len(start_numbers) >= 3:
+            start_year = 2000 + start_numbers[2] if start_numbers[2] < 100 else start_numbers[2]
+        else:
+            start_year = end_year
+
+        start_date = datetime(start_year, start_month, start_day)
+        end_date = datetime(end_year, end_month, end_day)
+
+        if end_date < start_date and len(start_numbers) < 3:
+            start_date = datetime(end_year - 1, start_month, start_day)
+
+        days = (end_date.date() - start_date.date()).days + 1
+        return days if days > 0 else None
 
     except Exception:
         return None
@@ -285,6 +338,7 @@ def main():
         data.append({
             "titel": title,
             "termin": date_text,
+            "dauer": trip_duration_days(date_text),
             "reisebuero": responsible,
             "gebucht": booked if booked is not None else 0,
             "max_tn": max_tn,
@@ -555,6 +609,9 @@ body {{
     else:
         for item in data:
             cls = free_class(item["frei"])
+            duration_detail = ""
+            if item["dauer"] is not None:
+                duration_detail = f'<span class="detail">⏱ {item["dauer"]} Tage</span>'
 
             html += f"""
 <div class="card" style="--accent:{item['accent']}; --tint:{item['tint']};">
@@ -566,6 +623,7 @@ body {{
 
         <div class="details">
             <span class="detail">📅 {item['termin']}</span>
+            {duration_detail}
             <span class="detail"><strong>Reisebüro:</strong> {item['reisebuero']}</span>
         </div>
     </div>

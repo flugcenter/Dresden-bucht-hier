@@ -1,6 +1,8 @@
 import json
+import hashlib
 from pathlib import Path
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -8,6 +10,78 @@ import pandas as pd
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1ofCTU1sES9tMBjS-hj2ruNtxeudRHEP1/export?format=csv"
 
 BLOCKED_STATUS_WORDS = ("storniert", "ausgebucht", "abgesagt")
+
+
+FLAG_RULES = [
+    (("menorca", "mallorca", "spanien", "andalus", "kanaren", "teneriffa", "gran canaria", "ibiza"), "🇪🇸"),
+    (("verona", "apulien", "italien", "sizilien", "sardinien", "toscana", "rom", "venedig", "kalabrien"), "🇮🇹"),
+    (("jersey",), "🇯🇪"),
+    (("indien",), "🇮🇳"),
+    (("island",), "🇮🇸"),
+    (("norwegen",), "🇳🇴"),
+    (("schweden",), "🇸🇪"),
+    (("finnland",), "🇫🇮"),
+    (("daenemark", "dänemark"), "🇩🇰"),
+    (("portugal", "madeira", "azoren"), "🇵🇹"),
+    (("frankreich", "provence", "normandie", "bretagne", "paris", "korsika"), "🇫🇷"),
+    (("griechenland", "kreta", "rhodos", "korfu"), "🇬🇷"),
+    (("tuerkei", "türkei", "kappadokien"), "🇹🇷"),
+    (("kroatien",), "🇭🇷"),
+    (("slowenien",), "🇸🇮"),
+    (("albanien",), "🇦🇱"),
+    (("montenegro",), "🇲🇪"),
+    (("bosnien",), "🇧🇦"),
+    (("serbien",), "🇷🇸"),
+    (("nordmazedonien", "mazedonien"), "🇲🇰"),
+    (("bulgarien",), "🇧🇬"),
+    (("rumaenien", "rumänien"), "🇷🇴"),
+    (("ungarn", "budapest"), "🇭🇺"),
+    (("tschechien", "prag", "boehmen", "böhmen"), "🇨🇿"),
+    (("polen", "breslau", "warschau", "krakau"), "🇵🇱"),
+    (("oesterreich", "österreich", "wien", "tirol"), "🇦🇹"),
+    (("schweiz",), "🇨🇭"),
+    (("niederlande", "holland", "amsterdam"), "🇳🇱"),
+    (("belgien", "bruessel", "brüssel"), "🇧🇪"),
+    (("irland",), "🇮🇪"),
+    (("schottland",), "🏴"),
+    (("england", "grossbritannien", "großbritannien", "london", "wales"), "🇬🇧"),
+    (("marokko",), "🇲🇦"),
+    (("aegypten", "ägypten", "kairo"), "🇪🇬"),
+    (("tunesien",), "🇹🇳"),
+    (("suedafrika", "südafrika"), "🇿🇦"),
+    (("namibia",), "🇳🇦"),
+    (("kenia",), "🇰🇪"),
+    (("tansania", "sansibar"), "🇹🇿"),
+    (("japan",), "🇯🇵"),
+    (("china",), "🇨🇳"),
+    (("vietnam",), "🇻🇳"),
+    (("thailand",), "🇹🇭"),
+    (("sri lanka",), "🇱🇰"),
+    (("nepal",), "🇳🇵"),
+    (("indonesien", "bali"), "🇮🇩"),
+    (("malaysia",), "🇲🇾"),
+    (("singapur",), "🇸🇬"),
+    (("kanada",), "🇨🇦"),
+    (("usa", "vereinigte staaten", "kalifornien", "new york", "florida"), "🇺🇸"),
+    (("mexiko",), "🇲🇽"),
+    (("kuba",), "🇨🇺"),
+    (("brasilien",), "🇧🇷"),
+    (("argentinien",), "🇦🇷"),
+    (("chile",), "🇨🇱"),
+    (("peru",), "🇵🇪"),
+    (("australien",), "🇦🇺"),
+    (("neuseeland",), "🇳🇿"),
+]
+
+CARD_COLORS = [
+    ("#0f5fa8", "#edf6ff"),
+    ("#8a3d72", "#fff1f8"),
+    ("#2f7d4a", "#eefaf2"),
+    ("#a45b12", "#fff6e9"),
+    ("#6350a3", "#f5f1ff"),
+    ("#147a82", "#edfbfc"),
+    ("#9a3f3f", "#fff1f1"),
+]
 
 
 def clean(value):
@@ -97,14 +171,26 @@ def last_filled_row(raw, col):
 
 def free_class(free_value):
     if isinstance(free_value, int):
-
         if free_value <= 0:
             return "free-full"
-
         if free_value <= 3:
             return "free-low"
-
     return "free-ok"
+
+
+def flag_for_title(title):
+    normalized = normalize_label(title)
+    for keywords, flag in FLAG_RULES:
+        for keyword in keywords:
+            if normalize_label(keyword) in normalized:
+                return flag
+    return "🌍"
+
+
+def color_for_title(title):
+    digest = hashlib.md5(title.encode("utf-8")).hexdigest()
+    index = int(digest[:8], 16) % len(CARD_COLORS)
+    return CARD_COLORS[index]
 
 
 def main():
@@ -116,7 +202,6 @@ def main():
     ROW_RESPONSIBLE = 2
     FIRST_COL = 1
 
-    # Gebuchte Teilnehmer dynamisch suchen
     row_booked = find_row(
         raw,
         [
@@ -126,7 +211,6 @@ def main():
         ]
     )
 
-    # Mindestteilnehmer dynamisch suchen
     row_min = find_row(
         raw,
         [
@@ -137,7 +221,6 @@ def main():
         ]
     )
 
-    # Maximalteilnehmer dynamisch suchen
     row_max = find_row(
         raw,
         [
@@ -148,7 +231,6 @@ def main():
         ]
     )
 
-    # Rückfallwerte für die bekannte Tabellenstruktur
     if row_booked is None:
         row_booked = 32
 
@@ -158,7 +240,7 @@ def main():
     if row_max is None:
         row_max = 34
 
-    today = datetime.today().date()
+    today = datetime.now(ZoneInfo("Europe/Berlin")).date()
     cutoff = today + timedelta(days=7)
 
     data = []
@@ -177,7 +259,6 @@ def main():
         if start is None:
             continue
 
-        # Nur Reisen, die mehr als 7 Tage in der Zukunft beginnen
         if start.date() <= cutoff:
             continue
 
@@ -185,46 +266,38 @@ def main():
         min_tn = to_int(raw.iat[row_min, col])
         max_tn = to_int(raw.iat[row_max, col])
 
-        # -----------------------------------------------------
-        # NEUE REGEL
-        #
-        # Wenn Mindestteilnehmer leer ist,
-        # aber bereits Teilnehmer gebucht sind,
-        # wird als Mindestteilnehmer 1 angenommen.
-        # -----------------------------------------------------
         if min_tn is None and booked is not None and booked > 0:
             min_tn = 1
 
-        # Status aus der letzten gefüllten Zeile der Reisespalte
         last = last_filled_row(raw, col)
         status = clean(raw.iat[last, col]) if last is not None else ""
 
         if is_blocked(status):
             continue
 
-        # Freie Plätze
         if max_tn is None:
             free_value = "auf Anfrage"
         else:
             free_value = max_tn if booked is None else max_tn - booked
 
+        accent, tint = color_for_title(title)
+
         data.append({
             "titel": title,
             "termin": date_text,
             "reisebuero": responsible,
+            "gebucht": booked if booked is not None else 0,
+            "max_tn": max_tn,
             "frei": free_value,
+            "flagge": flag_for_title(title),
+            "accent": accent,
+            "tint": tint,
             "sort_date": start.strftime("%Y-%m-%d")
         })
 
-    # Chronologisch sortieren
     data.sort(key=lambda x: x["sort_date"])
 
-    # =========================================================
-    # ÖFFENTLICHE AUSGABE
-    #
-    # reisen.json enthält bewusst KEIN Reisebüro.
-    # =========================================================
-
+    # Öffentliche JSON-Ausgabe bleibt bewusst schlank und ohne Reisebüro.
     json_output = [
         {
             "titel": item["titel"],
@@ -243,13 +316,7 @@ def main():
         encoding="utf-8"
     )
 
-    now = datetime.now().strftime("%d.%m.%Y %H:%M")
-
-    # =========================================================
-    # INTERNE MITARBEITERANSICHT
-    #
-    # Reisebüro bleibt hier ausdrücklich sichtbar.
-    # =========================================================
+    now = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%d.%m.%Y %H:%M")
 
     html = f"""<!doctype html>
 <html lang="de">
@@ -260,118 +327,172 @@ def main():
 <title>Dresden bucht hier – Aktuelle Reisen</title>
 
 <style>
+* {{ box-sizing: border-box; }}
 
 body {{
-    font-family: Arial, sans-serif;
+    font-family: Arial, Helvetica, sans-serif;
     margin: 0;
-    background: #f3f5f7;
-    color: #222;
+    background: #f4f6f8;
+    color: #1f2937;
 }}
 
 .header {{
-    background: linear-gradient(135deg, #005ea8, #003f70);
+    background: linear-gradient(135deg, #075895, #0a6da9 55%, #0a4879);
     color: white;
-    padding: 28px 20px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+    padding: 18px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
 }}
 
 .header-inner {{
-    max-width: 1050px;
+    max-width: 1120px;
     margin: auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
-    flex-wrap: wrap;
+    gap: 16px;
 }}
 
 .header h1 {{
     margin: 0;
-    font-size: 34px;
+    font-size: 28px;
+    line-height: 1.1;
 }}
 
 .subtitle {{
-    margin-top: 8px;
-    font-size: 15px;
-    opacity: 0.9;
+    margin-top: 4px;
+    font-size: 14px;
+    opacity: 0.92;
+}}
+
+.status {{
+    margin-top: 5px;
+    font-size: 12px;
+    opacity: 0.78;
 }}
 
 .info-button {{
     background: white;
-    color: #005ea8;
+    color: #075895;
     text-decoration: none;
-    padding: 14px 20px;
-    border-radius: 10px;
-    font-weight: bold;
-    transition: 0.2s ease;
+    padding: 10px 15px;
+    border-radius: 9px;
+    font-size: 14px;
+    font-weight: 700;
     white-space: nowrap;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
 }}
 
 .info-button:hover {{
-    background: #eef5fb;
+    background: #eef7ff;
 }}
 
 .container {{
-    max-width: 1050px;
-    margin: 25px auto;
-    padding: 0 14px;
+    max-width: 1120px;
+    margin: 16px auto 0;
+    padding: 0 12px;
 }}
 
 .card {{
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
     background: white;
-    border-radius: 14px;
-    padding: 18px 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.08);
-    transition: 0.15s ease;
-    border-left: 5px solid #005ea8;
+    border-radius: 11px;
+    padding: 11px 14px;
+    margin-bottom: 9px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+    border-left: 5px solid var(--accent);
 }}
 
-.card:hover {{
-    transform: translateY(-2px);
+.card-main {{
+    min-width: 0;
+}}
+
+.title-row {{
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+}}
+
+.flag {{
+    font-size: 25px;
+    line-height: 1;
+    flex: 0 0 auto;
 }}
 
 .title {{
-    font-size: 22px;
-    font-weight: 700;
-    margin-bottom: 10px;
-    color: #003b6f;
+    color: var(--accent);
+    font-size: 18px;
+    line-height: 1.2;
+    font-weight: 800;
 }}
 
-.meta {{
-    color: #555;
-    font-size: 15px;
-    margin-bottom: 6px;
+.details {{
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 5px 14px;
+    margin-top: 6px;
+    color: #5f6874;
+    font-size: 13px;
 }}
 
-.free-ok {{
-    color: #137333;
-    font-weight: 700;
-    margin-top: 10px;
+.detail strong {{
+    color: #303846;
 }}
 
-.free-low {{
-    color: #b26a00;
-    font-weight: 700;
-    margin-top: 10px;
+.booking-box {{
+    display: flex;
+    align-items: stretch;
+    background: var(--tint);
+    border-radius: 9px;
+    overflow: hidden;
+    min-width: 250px;
 }}
 
-.free-full {{
-    color: #b00020;
-    font-weight: 700;
-    margin-top: 10px;
+.booking-item {{
+    min-width: 118px;
+    padding: 8px 12px;
+    text-align: center;
 }}
+
+.booking-item + .booking-item {{
+    border-left: 1px solid rgba(31,41,55,0.12);
+}}
+
+.booking-number {{
+    color: var(--accent);
+    font-size: 20px;
+    line-height: 1.1;
+    font-weight: 800;
+}}
+
+.booking-label {{
+    color: #596273;
+    font-size: 11px;
+    margin-top: 2px;
+}}
+
+.free-ok {{ color: #137333; }}
+.free-low {{ color: #b26a00; }}
+.free-full {{ color: #b00020; }}
 
 .footer {{
-    text-align: center;
-    margin: 40px 0 25px;
-    color: #666;
-    font-size: 13px;
-    line-height: 1.6;
+    max-width: 1120px;
+    margin: 20px auto 22px;
+    padding: 0 12px;
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    color: #6b7280;
+    font-size: 12px;
 }}
 
 .footer a {{
-    color: #005ea8;
+    color: #075895;
     text-decoration: none;
 }}
 
@@ -379,120 +500,108 @@ body {{
     text-decoration: underline;
 }}
 
-.status {{
-    margin-top: 8px;
-    font-size: 13px;
-    opacity: 0.85;
-}}
-
-@media (max-width: 700px) {{
-
-    .header h1 {{
-        font-size: 28px;
+@media (max-width: 760px) {{
+    .header-inner {{
+        align-items: flex-start;
+        flex-direction: column;
     }}
 
-    .header-inner {{
-        flex-direction: column;
-        align-items: flex-start;
+    .header h1 {{
+        font-size: 24px;
     }}
 
     .card {{
-        padding: 16px;
+        grid-template-columns: 1fr;
+        gap: 9px;
     }}
 
-    .title {{
-        font-size: 20px;
+    .booking-box {{
+        min-width: 0;
+        width: 100%;
     }}
 
+    .booking-item {{
+        flex: 1;
+        min-width: 0;
+    }}
 }}
-
 </style>
 </head>
 
 <body>
 
 <div class="header">
-
     <div class="header-inner">
-
         <div>
-
             <h1>Dresden bucht hier</h1>
-
-            <div class="subtitle">
-                Interne Mitarbeiterübersicht
-            </div>
-
-            <div class="status">
-                Stand: {now}
-            </div>
-
+            <div class="subtitle">Interne Mitarbeiterübersicht</div>
+            <div class="status">Stand: {now}</div>
         </div>
 
         <a class="info-button"
            href="https://www.dresden-bucht-hier.de/"
-           target="_blank">
-           Weitere Informationen
+           target="_blank"
+           rel="noopener noreferrer">
+            Weitere Informationen
         </a>
-
     </div>
-
 </div>
 
 <div class="container">
 """
 
     if not data:
-
-        html += """
-<p>Zurzeit keine passenden Reisen vorhanden.</p>
-"""
-
+        html += "<p>Zurzeit keine passenden Reisen vorhanden.</p>"
     else:
-
         for item in data:
-
             cls = free_class(item["frei"])
 
             html += f"""
-<div class="card">
+<div class="card" style="--accent:{item['accent']}; --tint:{item['tint']};">
+    <div class="card-main">
+        <div class="title-row">
+            <span class="flag" aria-hidden="true">{item['flagge']}</span>
+            <div class="title">{item['titel']}</div>
+        </div>
 
-  <div class="title">
-    {item['titel']}
-  </div>
+        <div class="details">
+            <span class="detail">📅 {item['termin']}</span>
+            <span class="detail"><strong>Reisebüro:</strong> {item['reisebuero']}</span>
+        </div>
+    </div>
 
-  <div class="meta">
-    {item['termin']}
-  </div>
+    <div class="booking-box">
+        <div class="booking-item">
+            <div class="booking-number">{item['gebucht']}</div>
+            <div class="booking-label">Plätze gebucht</div>
+        </div>
+"""
 
-  <div class="meta">
-    Reisebüro: {item['reisebuero']}
-  </div>
+            if item["max_tn"] is not None:
+                html += f"""
+        <div class="booking-item">
+            <div class="booking-number {cls}">{item['frei']}</div>
+            <div class="booking-label">Noch frei</div>
+        </div>
+"""
 
-  <div class="{cls}">
-    Noch frei: {item['frei']}
-  </div>
-
+            html += """
+    </div>
 </div>
 """
 
-    html += """
+    html += f"""
 </div>
 
 <div class="footer">
-
-    <strong>Dresdner Reisebüros e.V.</strong><br>
-
-    <a href="https://www.dresden-bucht-hier.de/" target="_blank">
-        www.dresden-bucht-hier.de
-    </a>
-
-    <br><br>
-
-    <a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank">
-        Impressum
-    </a>
-
+    <div>
+        <strong>Dresdner Reisebüros e.V.</strong>
+        &nbsp;·&nbsp;
+        <a href="https://www.dresden-bucht-hier.de/" target="_blank" rel="noopener noreferrer">www.dresden-bucht-hier.de</a>
+        &nbsp;·&nbsp;
+        <a href="https://www.dresden-bucht-hier.de/#impressum" target="_blank" rel="noopener noreferrer">Impressum</a>
+    </div>
+    <div>Stand: {now}</div>
 </div>
 
 </body>

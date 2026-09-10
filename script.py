@@ -9,6 +9,7 @@ import pandas as pd
 
 
 SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/1ofCTU1sES9tMBjS-hj2ruNtxeudRHEP1/export?format=csv"
+FERIEN_SOURCE_URL = "https://www.schule.sachsen.de/schuljahrestermine-4793.html"
 
 BLOCKED_STATUS_WORDS = ("storniert", "ausgebucht", "abgesagt")
 
@@ -81,6 +82,39 @@ COUNTRY_CODE_RULES = [
     (("australien",), "au"),
     (("neuseeland",), "nz"),
 ]
+
+# Offizielle sächsische Schulferientermine, kalenderjährlich zusammengeführt.
+# Die Anzeige verwendet automatisch das laufende Jahr und das Folgejahr.
+SAXONY_HOLIDAYS = {
+    2026: [
+        ("Weihnachtsferien", "01.01.–02.01.2026"),
+        ("Winterferien", "09.02.–21.02.2026"),
+        ("Osterferien", "03.04.–10.04.2026"),
+        ("Unterrichtsfreier Tag", "15.05.2026"),
+        ("Sommerferien", "04.07.–14.08.2026"),
+        ("Herbstferien", "12.10.–24.10.2026"),
+        ("Weihnachtsferien", "23.12.2026–02.01.2027"),
+    ],
+    2027: [
+        ("Weihnachtsferien", "01.01.–02.01.2027"),
+        ("Winterferien", "08.02.–19.02.2027"),
+        ("Osterferien", "26.03.–02.04.2027"),
+        ("Unterrichtsfreier Tag", "07.05.2027"),
+        ("Pfingstferien", "15.05.–18.05.2027"),
+        ("Sommerferien", "10.07.–20.08.2027"),
+        ("Herbstferien", "11.10.–23.10.2027"),
+        ("Weihnachtsferien", "23.12.2027–01.01.2028"),
+    ],
+    2028: [
+        ("Weihnachtsferien", "01.01.2028"),
+        ("Winterferien", "14.02.–26.02.2028"),
+        ("Osterferien", "14.04.–22.04.2028"),
+        ("Unterrichtsfreier Tag", "26.05.2028"),
+        ("Sommerferien", "22.07.–01.09.2028"),
+        ("Herbstferien", "23.10.–03.11.2028"),
+        ("Weihnachtsferien", "23.12.2028–03.01.2029"),
+    ],
+}
 
 
 def clean(value):
@@ -247,20 +281,9 @@ def main():
     ROW_RESPONSIBLE = 2
     FIRST_COL = 1
 
-    row_booked = find_row(
-        raw,
-        ["gebuchte teilnehmer", "gebuchte tn", "gebucht"]
-    )
-
-    row_min = find_row(
-        raw,
-        ["mindestteilnehmer", "mindest teilnehmer", "mindest-tn", "mindest tn"]
-    )
-
-    row_max = find_row(
-        raw,
-        ["max-tn", "max tn", "maximalteilnehmer", "maximal teilnehmer"]
-    )
+    row_booked = find_row(raw, ["gebuchte teilnehmer", "gebuchte tn", "gebucht"])
+    row_min = find_row(raw, ["mindestteilnehmer", "mindest teilnehmer", "mindest-tn", "mindest tn"])
+    row_max = find_row(raw, ["max-tn", "max tn", "maximalteilnehmer", "maximal teilnehmer"])
 
     if row_booked is None:
         row_booked = 32
@@ -269,7 +292,8 @@ def main():
     if row_max is None:
         row_max = 34
 
-    today = datetime.now(ZoneInfo("Europe/Berlin")).date()
+    berlin_now = datetime.now(ZoneInfo("Europe/Berlin"))
+    today = berlin_now.date()
     cutoff = today + timedelta(days=7)
 
     data = []
@@ -339,7 +363,9 @@ def main():
         encoding="utf-8"
     )
 
-    now = datetime.now(ZoneInfo("Europe/Berlin")).strftime("%d.%m.%Y %H:%M")
+    now = berlin_now.strftime("%d.%m.%Y %H:%M")
+    current_year = berlin_now.year
+    holiday_years = [current_year, current_year + 1]
 
     html = f"""<!doctype html>
 <html lang="de">
@@ -473,6 +499,67 @@ body {{
 .free-ok {{ color: #137333; }}
 .free-low {{ color: #b26a00; }}
 .free-full {{ color: #b00020; }}
+
+.holiday-section {{
+    margin-top: 22px;
+}}
+.holiday-heading {{
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 10px;
+}}
+.holiday-heading h2 {{
+    margin: 0;
+    color: #123c5a;
+    font-size: 19px;
+}}
+.holiday-heading a {{
+    color: #075895;
+    font-size: 12px;
+    text-decoration: none;
+}}
+.holiday-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}}
+.holiday-year {{
+    background: white;
+    border-radius: 11px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.07);
+    overflow: hidden;
+}}
+.holiday-year-title {{
+    background: #eaf3fa;
+    color: #075895;
+    padding: 9px 12px;
+    font-size: 16px;
+    font-weight: 800;
+}}
+.holiday-list {{
+    margin: 0;
+    padding: 4px 12px 7px;
+    list-style: none;
+}}
+.holiday-row {{
+    display: grid;
+    grid-template-columns: minmax(135px, 1fr) auto;
+    gap: 12px;
+    padding: 6px 0;
+    border-bottom: 1px solid #edf0f3;
+    font-size: 12px;
+}}
+.holiday-row:last-child {{ border-bottom: 0; }}
+.holiday-name {{ font-weight: 700; color: #344054; }}
+.holiday-date {{ color: #5f6874; white-space: nowrap; }}
+.holiday-note {{
+    margin-top: 8px;
+    color: #6b7280;
+    font-size: 11px;
+}}
+
 .footer {{
     max-width: 1120px;
     margin: 20px auto 22px;
@@ -507,6 +594,8 @@ body {{
         flex: 1;
         min-width: 0;
     }}
+    .holiday-grid {{ grid-template-columns: 1fr; }}
+    .holiday-heading {{ align-items: flex-start; flex-direction: column; }}
 }}
 </style>
 </head>
@@ -573,6 +662,28 @@ body {{
 """
 
     html += f"""
+<div class="holiday-section">
+    <div class="holiday-heading">
+        <h2>Schulferien Sachsen · {current_year} + {current_year + 1}</h2>
+        <a href="{FERIEN_SOURCE_URL}" target="_blank" rel="noopener noreferrer">Offizielle Quelle: Freistaat Sachsen</a>
+    </div>
+    <div class="holiday-grid">
+"""
+
+    for year in holiday_years:
+        holidays = SAXONY_HOLIDAYS.get(year, [])
+        html += f'<div class="holiday-year"><div class="holiday-year-title">{year}</div><ul class="holiday-list">'
+        if holidays:
+            for name, date_range in holidays:
+                html += f'<li class="holiday-row"><span class="holiday-name">{name}</span><span class="holiday-date">{date_range}</span></li>'
+        else:
+            html += '<li class="holiday-row"><span class="holiday-name">Termine noch nicht hinterlegt</span><span class="holiday-date"></span></li>'
+        html += '</ul></div>'
+
+    html += f"""
+    </div>
+    <div class="holiday-note">Zusätzlich gibt es je nach Schuljahr einen frei beweglichen Ferientag, den die jeweilige Schule festlegt. Angegeben sind jeweils erster und letzter Ferientag.</div>
+</div>
 </div>
 <div class="footer">
     <div>

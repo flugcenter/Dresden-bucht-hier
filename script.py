@@ -22,6 +22,66 @@ CARD_COLORS = [
     ("#9a3f3f", "#fff1f1"),
 ]
 
+COUNTRY_CODE_RULES = [
+    (("menorca", "mallorca", "spanien", "andalus", "kanaren", "teneriffa", "gran canaria", "ibiza"), "es"),
+    (("verona", "apulien", "italien", "sizilien", "sardinien", "toscana", "rom", "venedig", "kalabrien"), "it"),
+    (("jersey",), "je"),
+    (("indien",), "in"),
+    (("island",), "is"),
+    (("norwegen", "fjord"), "no"),
+    (("schweden",), "se"),
+    (("finnland",), "fi"),
+    (("daenemark", "dänemark"), "dk"),
+    (("portugal", "madeira", "azoren"), "pt"),
+    (("frankreich", "provence", "normandie", "bretagne", "paris", "korsika"), "fr"),
+    (("griechenland", "kreta", "rhodos", "korfu"), "gr"),
+    (("tuerkei", "türkei", "kappadokien"), "tr"),
+    (("kroatien",), "hr"),
+    (("slowenien",), "si"),
+    (("albanien",), "al"),
+    (("montenegro",), "me"),
+    (("bosnien",), "ba"),
+    (("serbien",), "rs"),
+    (("nordmazedonien", "mazedonien"), "mk"),
+    (("bulgarien",), "bg"),
+    (("rumaenien", "rumänien"), "ro"),
+    (("ungarn", "budapest"), "hu"),
+    (("tschechien", "prag", "boehmen", "böhmen"), "cz"),
+    (("polen", "breslau", "warschau", "krakau"), "pl"),
+    (("oesterreich", "österreich", "wien", "tirol"), "at"),
+    (("schweiz",), "ch"),
+    (("niederlande", "holland", "amsterdam"), "nl"),
+    (("belgien", "bruessel", "brüssel"), "be"),
+    (("irland",), "ie"),
+    (("schottland", "england", "grossbritannien", "großbritannien", "london", "wales"), "gb"),
+    (("marokko",), "ma"),
+    (("aegypten", "ägypten", "kairo"), "eg"),
+    (("tunesien",), "tn"),
+    (("suedafrika", "südafrika"), "za"),
+    (("namibia",), "na"),
+    (("kenia",), "ke"),
+    (("tansania", "sansibar"), "tz"),
+    (("japan",), "jp"),
+    (("china",), "cn"),
+    (("vietnam",), "vn"),
+    (("thailand",), "th"),
+    (("sri lanka",), "lk"),
+    (("nepal",), "np"),
+    (("indonesien", "bali"), "id"),
+    (("malaysia",), "my"),
+    (("singapur",), "sg"),
+    (("kanada",), "ca"),
+    (("usa", "vereinigte staaten", "kalifornien", "new york", "florida"), "us"),
+    (("mexiko",), "mx"),
+    (("kuba",), "cu"),
+    (("brasilien",), "br"),
+    (("argentinien",), "ar"),
+    (("chile",), "cl"),
+    (("peru",), "pe"),
+    (("australien",), "au"),
+    (("neuseeland",), "nz"),
+]
+
 
 def clean(value):
     if pd.isna(value):
@@ -170,6 +230,15 @@ def color_for_title(title):
     return CARD_COLORS[index]
 
 
+def country_code_for_title(title):
+    normalized = normalize_label(title)
+    for keywords, code in COUNTRY_CODE_RULES:
+        for keyword in keywords:
+            if normalize_label(keyword) in normalized:
+                return code
+    return None
+
+
 def main():
     raw = pd.read_csv(SHEET_CSV_URL, header=None)
 
@@ -248,6 +317,7 @@ def main():
             "gebucht": booked if booked is not None else 0,
             "max_tn": max_tn,
             "frei": free_value,
+            "country_code": country_code_for_title(title),
             "accent": accent,
             "tint": tint,
             "sort_date": start.strftime("%Y-%m-%d")
@@ -344,6 +414,19 @@ body {{
     border-left: 5px solid var(--accent);
 }}
 .card-main {{ min-width: 0; }}
+.title-row {{
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}}
+.country-flag {{
+    width: 28px;
+    height: 19px;
+    object-fit: cover;
+    border-radius: 3px;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.12);
+    flex: 0 0 auto;
+}}
 .title {{
     color: var(--accent);
     font-size: 18px;
@@ -452,11 +535,18 @@ body {{
         for item in data:
             cls = free_class(item["frei"])
             duration_text = f" · {item['dauer']} Tage" if item["dauer"] is not None else ""
+            flag_html = ""
+            if item["country_code"]:
+                code = item["country_code"]
+                flag_html = f'<img class="country-flag" src="https://flagcdn.com/w40/{code}.png" alt="Flagge" loading="lazy">'
 
             html += f"""
 <div class="card" style="--accent:{item['accent']}; --tint:{item['tint']};">
     <div class="card-main">
-        <div class="title">{item['titel']}</div>
+        <div class="title-row">
+            {flag_html}
+            <div class="title">{item['titel']}</div>
+        </div>
         <div class="details">
             <span class="detail">📅 {item['termin']}{duration_text}</span>
             <span class="detail"><strong>Reisebüro:</strong> {item['reisebuero']}</span>

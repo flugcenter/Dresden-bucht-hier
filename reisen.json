@@ -17,11 +17,16 @@
   {
     "titel": "Menorca",
     "termin": "4.5.-11.5.27",
-    "frei": "auf Anfrage"
+    "frei": 10
   },
   {
     "titel": "Nordmazedonien",
     "termin": "25.05.-01.06.27",
+    "frei": "auf Anfrage"
+  },
+  {
+    "titel": "Bregenz",
+    "termin": "8.8.-12.8.27",
     "frei": "auf Anfrage"
   },
   {
@@ -35,8 +40,13 @@
     "frei": "auf Anfrage"
   },
   {
+    "titel": "Marokko Königsstädte",
+    "termin": "2.11.-9.11.27",
+    "frei": 22
+  },
+  {
     "titel": "Marokko",
-    "termin": "1.11.-8.11.27",
+    "termin": "2.11.-9.11.27",
     "frei": "auf Anfrage"
   }
 ]
